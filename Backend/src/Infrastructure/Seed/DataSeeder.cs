@@ -1,5 +1,6 @@
 using AssignmentSystem.Domain.Entities;
 using AssignmentSystem.Domain.Enums;
+using AssignmentSystem.Infrastructure.Auth;
 using AssignmentSystem.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,6 +15,11 @@ public static class DataSeeder
     private const string AdminPassword = "Admin@123";
     private const string TeacherPassword = "Teacher@123";
     private const string StudentPassword = "Student@123";
+
+    // Deliberately reuses the hasher's constant rather than declaring its own. Phase 1 shipped a
+    // local default here and ended up with $2a$11$ hashes against a documented 12 — one constant
+    // makes that drift impossible.
+    private const int WorkFactor = BcryptPasswordHasher.WorkFactor;
 
     public static async Task SeedAsync(AppDbContext context, CancellationToken cancellationToken = default)
     {
@@ -138,5 +144,6 @@ public static class DataSeeder
         await context.SaveChangesAsync(cancellationToken);
     }
 
-    private static string Hash(string password) => BCrypt.Net.BCrypt.HashPassword(password);
+    private static string Hash(string password) =>
+        BCrypt.Net.BCrypt.HashPassword(password, WorkFactor);
 }

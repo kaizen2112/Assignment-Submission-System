@@ -5,11 +5,11 @@
 \pset footer off
 
 \echo
-\echo ===== 1. TABLES (expect 7 + __EFMigrationsHistory) =====
+\echo ===== 1. TABLES (expect 8 + __EFMigrationsHistory) =====
 SELECT tablename,
        CASE WHEN tablename IN ('users','classes','subjects','teacher_assignments',
                                'student_enrollments','assignments','submissions',
-                               '__EFMigrationsHistory')
+                               'refresh_tokens','__EFMigrationsHistory')
             THEN 'PASS' ELSE 'UNEXPECTED' END AS status
 FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename;
 
@@ -72,9 +72,15 @@ ORDER BY expected.name;
 
 \echo
 \echo ===== 6. DEMO USERS WITH BCRYPT-HASHED PASSWORDS =====
-SELECT "Email", "Role", left("PasswordHash", 4) AS algo, length("PasswordHash") AS len,
-       CASE WHEN "PasswordHash" LIKE '$2%$%' AND length("PasswordHash") = 60
-            THEN 'PASS' ELSE 'FAIL - not a bcrypt hash' END AS status
+-- left(..,7) shows the cost factor too ('$2a$12$'), not just the algorithm.
+SELECT "Email", "Role", left("PasswordHash", 7) AS algo_cost, length("PasswordHash") AS len,
+       CASE
+         WHEN "PasswordHash" NOT LIKE '$2%$%' OR length("PasswordHash") <> 60
+              THEN 'FAIL - not a bcrypt hash'
+         WHEN left("PasswordHash", 7) <> '$2a$12$'
+              THEN 'FAIL - wrong work factor, expected 12'
+         ELSE 'PASS'
+       END AS status
 FROM users ORDER BY "Role", "Email";
 
 \echo
