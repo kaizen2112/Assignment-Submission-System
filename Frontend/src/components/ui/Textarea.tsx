@@ -1,10 +1,12 @@
 "use client";
 
 import { useId } from "react";
-import type { TextareaHTMLAttributes } from "react";
+import type { ComponentPropsWithRef } from "react";
 import { cn } from "@/lib/utils";
 
-interface TextareaProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "id"> {
+// ComponentPropsWithRef so React Hook Form's register() can be spread straight in — see the note in
+// Input.tsx.
+interface TextareaProps extends Omit<ComponentPropsWithRef<"textarea">, "id"> {
   label: string;
   error?: string;
   hint?: string;

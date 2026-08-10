@@ -1,10 +1,15 @@
 "use client";
 
 import { useId } from "react";
-import type { InputHTMLAttributes } from "react";
+import type { ComponentPropsWithRef } from "react";
 import { cn } from "@/lib/utils";
 
-interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "id"> {
+// ComponentPropsWithRef, not InputHTMLAttributes: React Hook Form's register() returns a `ref` along
+// with name/onChange/onBlur, and the whole point is to spread that object onto the field in one go.
+// InputHTMLAttributes does not declare a ref, so `<Input {...register("email")} />` would not compile.
+// No forwardRef needed — React 19 passes ref to function components as an ordinary prop, so it rides
+// along in `rest` and lands on the <input> below.
+interface InputProps extends Omit<ComponentPropsWithRef<"input">, "id"> {
   label: string;
   // The server's field message from ApiError.fieldError(), or a Zod message. Rendering it here keeps
   // every form's error placement identical.
