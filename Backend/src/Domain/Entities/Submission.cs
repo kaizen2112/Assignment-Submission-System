@@ -21,11 +21,14 @@ public sealed class Submission
     // the fact that the work arrived late — which a teacher still needs to see afterwards.
     public bool IsLate { get; private set; }
 
+    // `internal set` on the navigations for the same reason as Assignment.Class: EF fills them, no
+    // application code may, and the tests must be able to assemble the graph a repository would
+    // return. Rules 2 and 5 both read through Assignment, so a test without it proves nothing.
     public Guid AssignmentId { get; private set; }
-    public Assignment Assignment { get; private set; } = null!;
+    public Assignment Assignment { get; internal set; } = null!;
 
     public Guid StudentId { get; private set; }
-    public User Student { get; private set; } = null!;
+    public User Student { get; internal set; } = null!;
 
     public DateTime SubmittedAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }

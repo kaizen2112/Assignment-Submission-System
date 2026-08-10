@@ -21,10 +21,15 @@ public sealed class Assignment
 
     // Scope. Both IDs are needed to match against a TeacherAssignment row when authorizing
     // the creating teacher (rule 4).
+    //
+    // The two navigation properties are `internal set` rather than `private set`: EF populates them,
+    // application code must never assign one, and the unit tests need to build the same graph EF
+    // would. Internal keeps them unreachable from Application and Api, where the temptation would be
+    // to attach an entity by hand instead of loading it.
     public Guid ClassId { get; private set; }
-    public Class Class { get; private set; } = null!;
+    public Class Class { get; internal set; } = null!;
     public Guid SubjectId { get; private set; }
-    public Subject Subject { get; private set; } = null!;
+    public Subject Subject { get; internal set; } = null!;
 
     public Guid CreatedByTeacherId { get; private set; }
     public User CreatedByTeacher { get; private set; } = null!;

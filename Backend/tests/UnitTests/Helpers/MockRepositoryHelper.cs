@@ -1,0 +1,212 @@
+using AssignmentSystem.Application.Common;
+using AssignmentSystem.Application.Interfaces;
+using AssignmentSystem.Domain.Entities;
+using AssignmentSystem.Domain.Enums;
+using Moq;
+using AssignmentEntity = AssignmentSystem.Domain.Entities.Assignment;
+using SubmissionEntity = AssignmentSystem.Domain.Entities.Submission;
+
+namespace AssignmentSystem.UnitTests.Helpers;
+
+// Two things live here: single-purpose mock factories, and a ServiceMocks bag that holds a whole set
+// so a test can construct a real service in one line.
+//
+// MockBehavior.Strict is deliberately NOT used. Every service touches only some of its dependencies
+// on any given path, and Strict would make each test declare setups for calls it does not care about —
+// noise that hides the one line that matters. Where "was this even called?" is the actual assertion,
+// the tests verify it explicitly instead.
+internal static class MockRepositoryHelper
+{
+    // --- Current user ---------------------------------------------------------------------------
+
+    internal static Mock<ICurrentUserService> CurrentUser(Guid userId, Role role)
+    {
+        var mock = new Mock<ICurrentUserService>();
+        mock.SetupGet(c => c.UserId).Returns(userId);
+        // Role travels as the raw claim string, exactly as CurrentUserService reads it off the JWT.
+        mock.SetupGet(c => c.Role).Returns(role.ToString());
+        mock.SetupGet(c => c.IsAuthenticated).Returns(true);
+        return mock;
+    }
+
+    // For the "service must not trust the [Authorize] attribute" paths: a token with no usable sub.
+    internal static Mock<ICurrentUserService> AnonymousUser()
+    {
+        var mock = new Mock<ICurrentUserService>();
+        mock.SetupGet(c => c.UserId).Returns((Guid?)null);
+        mock.SetupGet(c => c.Role).Returns((string?)null);
+        mock.SetupGet(c => c.IsAuthenticated).Returns(false);
+        return mock;
+    }
+
+    // --- Assignments ----------------------------------------------------------------------------
+
+    // The teacher/admin read path. Matches on the assignment's own id, so a lookup for any other id
+    // falls through to the mock's default (null) — which is exactly the not-found case.
+    internal static Mock<IAssignmentRepository> AssignmentsWith(AssignmentEntity assignment)
+    {
+        var mock = new Mock<IAssignmentRepository>();
+        mock.Setup(r => r.GetByIdAsync(assignment.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(assignment);
+        return mock;
+    }
+
+    // Every id returns null: the 404 arrangement.
+    internal static Mock<IAssignmentRepository> AssignmentsEmpty()
+    {
+        var mock = new Mock<IAssignmentRepository>();
+        mock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AssignmentEntity?)null);
+        mock.Setup(r => r.GetPublishedForStudentAsync(
+                It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((AssignmentEntity?)null);
+        return mock;
+    }
+
+    // The student read path (rules 3 + 6). Set visible: false to model a draft, or an assignment in a
+    // class the student is not enrolled in — the repository returns null for both, and the service
+    // cannot tell them apart, which is the point of assumption A7.
+    internal static Mock<IAssignmentRepository> AssignmentsForStudent(
+        AssignmentEntity assignment,
+        Guid studentId,
+        bool visible = true)
+    {
+        var mock = new Mock<IAssignmentRepository>();
+        mock.Setup(r => r.GetPublishedForStudentAsync(
+                assignment.Id, studentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(visible ? assignment : null);
+        mock.Setup(r => r.GetByIdAsync(assignment.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(assignment);
+        return mock;
+    }
+
+    internal static Mock<IAssignmentRepository> WithPage(
+        this Mock<IAssignmentRepository> mock,
+        params AssignmentEntity[] assignments)
+    {
+        var page = new PagedResult<AssignmentEntity>(
+            assignments, 1, PaginationQuery.DefaultPageSize, assignments.Length);
+
+        mock.Setup(r => r.GetPagedForTeacherAsync(
+                It.IsAny<Guid>(), It.IsAny<AssignmentFilter>(), It.IsAny<PaginationQuery>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(page);
+        mock.Setup(r => r.GetPagedForStudentAsync(
+                It.IsAny<Guid>(), It.IsAny<AssignmentFilter>(), It.IsAny<PaginationQuery>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(page);
+        mock.Setup(r => r.GetPagedForAdminAsync(
+                It.IsAny<AssignmentFilter>(), It.IsAny<PaginationQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(page);
+
+        return mock;
+    }
+
+    internal static Mock<IAssignmentRepository> WithSubmissions(
+        this Mock<IAssignmentRepository> mock,
+        bool hasSubmissions)
+    {
+        mock.Setup(r => r.HasSubmissionsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(hasSubmissions);
+        return mock;
+    }
+
+    // --- Submissions ----------------------------------------------------------------------------
+
+    internal static Mock<ISubmissionRepository> SubmissionsWith(SubmissionEntity submission)
+    {
+        var mock = new Mock<ISubmissionRepository>();
+        mock.Setup(r => r.GetByIdAsync(submission.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(submission);
+        mock.Setup(r => r.GetByAssignmentAndStudentAsync(
+                submission.AssignmentId, submission.StudentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(submission);
+        mock.Setup(r => r.ExistsForAssignmentAndStudentAsync(
+                submission.AssignmentId, submission.StudentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        return mock;
+    }
+
+    // Nothing submitted yet: /mine is a 404 and a new submission is allowed through (A4 satisfied).
+    internal static Mock<ISubmissionRepository> SubmissionsEmpty()
+    {
+        var mock = new Mock<ISubmissionRepository>();
+        mock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((SubmissionEntity?)null);
+        mock.Setup(r => r.GetByAssignmentAndStudentAsync(
+                It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((SubmissionEntity?)null);
+        mock.Setup(r => r.ExistsForAssignmentAndStudentAsync(
+                It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        return mock;
+    }
+
+    // --- Classes (the rule-4 gate) --------------------------------------------------------------
+
+    // isAssigned is the single switch behind every rule-4 test: true for "teacher holds this
+    // class+subject", false for "not assigned" -> 403.
+    internal static Mock<IClassRepository> Classes(
+        bool isAssigned = true,
+        Class? @class = null,
+        Subject? subject = null)
+    {
+        var mock = new Mock<IClassRepository>();
+
+        mock.Setup(r => r.TeacherAssignmentExistsAsync(
+                It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(isAssigned);
+
+        if (@class is not null)
+        {
+            mock.Setup(r => r.GetByIdAsync(@class.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(@class);
+        }
+
+        if (subject is not null)
+        {
+            mock.Setup(r => r.GetSubjectByIdAsync(subject.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(subject);
+        }
+
+        return mock;
+    }
+
+    // --- Users ----------------------------------------------------------------------------------
+
+    internal static Mock<IUserRepository> UsersWith(params User[] users)
+    {
+        var mock = new Mock<IUserRepository>();
+
+        foreach (var user in users)
+        {
+            mock.Setup(r => r.GetByIdAsync(user.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(user);
+            mock.Setup(r => r.GetByEmailAsync(user.Email, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(user);
+        }
+
+        return mock;
+    }
+
+    // --- A whole dependency set -----------------------------------------------------------------
+
+    // Holds every mock a service needs, so a test constructs the real service in one line and then
+    // reaches into whichever mock it wants to reconfigure or verify.
+    internal sealed class ServiceMocks
+    {
+        internal Mock<IAssignmentRepository> Assignments { get; init; } = new();
+        internal Mock<ISubmissionRepository> Submissions { get; init; } = new();
+        internal Mock<IClassRepository> Classes { get; init; } = new();
+        internal Mock<IUserRepository> Users { get; init; } = new();
+        internal Mock<ICurrentUserService> CurrentUser { get; init; } = new();
+
+        // Asserts the obvious follow-up to any successful mutation: it was actually persisted.
+        // Forgetting SaveChangesAsync produces a service that returns 200 and changes nothing.
+        internal void VerifyAssignmentSaved(Times times) =>
+            Assignments.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), times);
+
+        internal void VerifySubmissionSaved(Times times) =>
+            Submissions.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), times);
+    }
+}
