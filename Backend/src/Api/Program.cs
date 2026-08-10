@@ -85,6 +85,31 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+// --- CORS -------------------------------------------------------------------------------------
+
+// The Next.js frontend runs on a different origin (localhost:3000 vs localhost:5274), so without
+// this every browser fetch fails the same-origin check before it reaches a controller. Swagger is
+// unaffected because it is served from this origin, which is why nothing needed CORS until now.
+const string frontendCorsPolicy = "Frontend";
+
+// Read from configuration rather than hard-coded: Docker Compose and any deployed environment serve
+// the frontend from a different origin than localhost:3000. An unconfigured environment gets an
+// empty list, and WithOrigins([]) matches nothing — cross-origin calls stay blocked until someone
+// names the origin deliberately, which is the right default for production.
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(frontendCorsPolicy, policy => policy
+        .WithOrigins(allowedOrigins)
+        .AllowAnyHeader()
+        .AllowAnyMethod());
+
+    // No .AllowCredentials(). The frontend sends its JWT in the Authorization header, not a cookie,
+    // so cookies never need to cross origins. Leaving credentials off also keeps this policy immune
+    // to the CSRF class of bug that ambient cookie auth invites.
+});
+
 // --- Database ---------------------------------------------------------------------------------
 
 // Docker supplies this as the ConnectionStrings__Default environment variable; locally it comes
@@ -184,6 +209,12 @@ if (app.Environment.IsDevelopment())
     await context.Database.MigrateAsync();
     await DataSeeder.SeedAsync(context);
 }
+
+// Before authentication, and before the HTTPS redirect below. A CORS preflight is an unauthenticated
+// OPTIONS request carrying no token, so it must be answered before [Authorize] can reject it — and
+// browsers do not follow redirects on preflights, so a 307 from UseHttpsRedirection would fail it
+// outright.
+app.UseCors(frontendCorsPolicy);
 
 // Development is deliberately excluded. Kestrel listens on both http (5274) and https (7222), so
 // redirecting http API calls sends the browser to a *different origin* — Swagger UI loaded over

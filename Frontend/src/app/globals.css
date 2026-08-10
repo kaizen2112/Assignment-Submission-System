@@ -1,0 +1,25 @@
+/* Tailwind 4 is configured from CSS, not a tailwind.config.js. This single import pulls in the
+   preflight reset, the utility engine, and automatic content detection. */
+@import "tailwindcss";
+
+/* Design tokens exposed as Tailwind theme values, so `bg-surface` works alongside the built-ins. */
+@theme {
+  --color-surface: #f8fafc;
+}
+
+body {
+  background-color: var(--color-surface);
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Respect a user's reduced-motion preference — the Button spinner is the only animation so far. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
