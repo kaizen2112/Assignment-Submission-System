@@ -298,6 +298,70 @@ public sealed class SubmissionServiceTests
     }
 
     // =============================================================================================
+    // RULE 3 — a student reaches only their own submission
+    // =============================================================================================
+
+    [Fact]
+    public async Task GetMineAsync_OtherStudentsSubmission_ReturnsNotFound()
+    {
+        // Arrange — the repository is asked for (assignmentId, callerId). Another student's row simply
+        // does not match, so it is absent rather than forbidden — 403 would confirm it exists (A7).
+        var owner = EntityBuilders.Student("Owner", "owner@test.com");
+        var otherStudent = EntityBuilders.Student("Other", "other@test.com");
+        var assignment = EntityBuilders.Assignment();
+        var ownersSubmission = EntityBuilders.Submission(assignment, owner.Id, student: owner);
+
+        var mocks = new MockRepositoryHelper.ServiceMocks
+        {
+            // Set up for the owner only; the caller below is someone else.
+            Submissions = MockRepositoryHelper.SubmissionsWith(ownersSubmission),
+            CurrentUser = MockRepositoryHelper.CurrentUser(otherStudent.Id, Role.Student)
+        };
+
+        // Act
+        var result = await Build(mocks).GetMineAsync(assignment.Id, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorType.Should().Be(ErrorType.NotFound);
+
+        // The lookup must carry the caller's own id — never the id from the route or the body.
+        mocks.Submissions.Verify(
+            r => r.GetByAssignmentAndStudentAsync(
+                assignment.Id, otherStudent.Id, It.IsAny<CancellationToken>()),
+            Times.Once());
+        mocks.Submissions.Verify(
+            r => r.GetByAssignmentAndStudentAsync(
+                It.IsAny<Guid>(), owner.Id, It.IsAny<CancellationToken>()),
+            Times.Never());
+    }
+
+    [Fact]
+    public async Task GetMineAsync_OwnSubmission_ReturnsItWithMarks()
+    {
+        // Arrange — the other half of rule 3: a student does see their own graded result.
+        var student = EntityBuilders.Student();
+        var assignment = EntityBuilders.Assignment(maxMarks: 50);
+        var submission = EntityBuilders.Submission(
+            assignment, student.Id, SubmissionStatus.Graded, gradedMarks: 45, student: student);
+
+        var mocks = new MockRepositoryHelper.ServiceMocks
+        {
+            Submissions = MockRepositoryHelper.SubmissionsWith(submission),
+            CurrentUser = MockRepositoryHelper.CurrentUser(student.Id, Role.Student)
+        };
+
+        // Act
+        var result = await Build(mocks).GetMineAsync(assignment.Id, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Marks.Should().Be(45);
+        result.Value.MaxMarks.Should().Be(50, "the client renders 45/50 without a second request");
+        result.Value.Feedback.Should().NotBeNull();
+    }
+
+    // =============================================================================================
     // RULE 5 — marks must land within 0..MaxMarks
     // =============================================================================================
 

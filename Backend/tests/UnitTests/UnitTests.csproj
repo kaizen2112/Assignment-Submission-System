@@ -25,6 +25,11 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Application\Application.csproj" />
     <ProjectReference Include="..\..\src\Domain\Domain.csproj" />
+    <!-- Api is referenced only so RoleGuardTests can reflect over the controllers' [Authorize]
+         attributes. Rule 7 is enforced by those attributes and nowhere else, so a test that cannot
+         see them cannot check it. This widens the graph in docs/01 by one test-only edge; no test
+         constructs a controller or touches the HTTP pipeline. -->
+    <ProjectReference Include="..\..\src\Api\Api.csproj" />
   </ItemGroup>
 
 </Project>
