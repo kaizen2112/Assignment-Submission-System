@@ -1,20 +1,46 @@
 using System.Text;
+using AssignmentSystem.Api.Extensions;
+using AssignmentSystem.Api.Filters;
 using AssignmentSystem.Api.Middleware;
 using AssignmentSystem.Api.Services;
 using AssignmentSystem.Application.Interfaces;
 using AssignmentSystem.Application.Services;
+using AssignmentSystem.Application.Validators.Assignment;
 using AssignmentSystem.Infrastructure.Auth;
 using AssignmentSystem.Infrastructure.Persistence;
 using AssignmentSystem.Infrastructure.Repositories;
 using AssignmentSystem.Infrastructure.Seed;
+using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+// --- Controllers and validation ---------------------------------------------------------------
+
+// The filter is global, so any DTO with a registered validator is checked before its action runs.
+builder.Services.AddControllers(options => options.Filters.Add<ValidationFilter>());
+
+// Scans the Application assembly, so a new validator needs no registration line here.
+builder.Services.AddValidatorsFromAssemblyContaining<CreateAssignmentValidator>();
+
+// [ApiController]'s automatic 400 fires for model-binding failures before any action filter, and
+// its default body differs from the one ValidationFilter produces (extra traceId, parser text
+// naming JSON paths). Overriding the factory gives both paths one shape.
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+        ValidationProblems.FromModelState(context.ModelState);
+});
+
+// System.Text.Json's parse errors are put straight into ModelState by default, and they read like
+// "'\"' is invalid after a value ... Path: $ | LineNumber: 0 | BytePositionInLine: 18" — the parser's
+// internal position data, echoed to whoever sent the bad request. Off, so the framework substitutes
+// a generic message instead.
+builder.Services.Configure<JsonOptions>(options => options.AllowInputFormatterExceptionMessages = false);
 
 // --- Swagger ----------------------------------------------------------------------------------
 
@@ -130,6 +156,7 @@ builder.Services.AddScoped<IAssignmentRepository, AssignmentRepository>();
 builder.Services.AddScoped<ISubmissionRepository, SubmissionRepository>();
 builder.Services.AddScoped<IClassRepository, ClassRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IAssignmentService, AssignmentService>();
 
 var app = builder.Build();
 

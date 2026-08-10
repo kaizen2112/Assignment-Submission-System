@@ -23,4 +23,9 @@ public sealed class PagedResult<T>
     // An empty page is a successful result, not an error — a student with no assignments yet gets
     // items: [] and totalCount: 0, never a 404.
     public static PagedResult<T> Empty(int page, int pageSize) => new([], page, pageSize, 0);
+
+    // Repositories page entities; controllers return DTOs. Mapping here keeps the three metadata
+    // fields from being copied by hand at every call site, where one of them eventually gets missed.
+    public PagedResult<TOut> Map<TOut>(Func<T, TOut> selector) =>
+        new([.. Items.Select(selector)], Page, PageSize, TotalCount);
 }

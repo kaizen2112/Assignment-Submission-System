@@ -1,0 +1,31 @@
+using AssignmentSystem.Application.Common;
+using AssignmentSystem.Application.DTOs.Assignment;
+using AssignmentSystem.Application.DTOs.Common;
+
+namespace AssignmentSystem.Application.Interfaces;
+
+// Every method resolves the caller from ICurrentUserService rather than taking a userId parameter.
+// A controller cannot then pass someone else's id, by accident or otherwise.
+public interface IAssignmentService
+{
+    // Scoped by the caller's role: teacher -> own (any status), student -> published in their
+    // enrolled classes, admin -> everything.
+    Task<Result<PagedResult<AssignmentListItemResponse>>> GetPagedAsync(
+        AssignmentQueryParameters query,
+        CancellationToken cancellationToken = default);
+
+    Task<Result<AssignmentResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<Result<AssignmentResponse>> CreateAsync(
+        CreateAssignmentRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<Result<AssignmentResponse>> UpdateAsync(
+        Guid id,
+        UpdateAssignmentRequest request,
+        CancellationToken cancellationToken = default);
+
+    Task<Result<AssignmentResponse>> PublishAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+}

@@ -12,4 +12,12 @@
     <ProjectReference Include="..\Domain\Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+    <!-- FluentValidation asks only for a 2.1.0 floor. Pinned to the version the rest of the
+         solution uses, so the build doesn't drop a decade-old abstractions assembly in the
+         output next to the 9.x one the shared framework loads. -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.4" />
+  </ItemGroup>
+
 </Project>

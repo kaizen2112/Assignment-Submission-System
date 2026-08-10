@@ -69,6 +69,20 @@ strict rather than convenient.
 - **Deleting a user who has academic records is refused, not cascaded.** Removing a teacher who
   authored assignments, or a student who submitted work, would erase marks; the database rejects
   it. Deleting a *class* does cascade through its subjects, assignments and submissions.
+- **An assignment with submissions cannot be deleted.** It returns 409 rather than cascading, since
+  the cascade would destroy already-graded student work. Draft assignments have no submissions by
+  definition, so they delete freely.
+- **A deadline sent without a timezone offset is read as UTC.** `"2026-08-20T23:59:00"` and
+  `"2026-08-20T23:59:00Z"` mean the same instant. Rejecting the first would fail Swagger's default
+  try-it-out payload for no real gain; all timestamps are stored and returned as UTC.
+- **An overdue assignment stays editable as long as the deadline is not changed.** A teacher can fix
+  a typo in last week's homework, but cannot back-date a deadline — that would retroactively lock out
+  students who still had time to submit. A *new* deadline must be in the future.
+- **An assignment's class and subject are fixed once created.** Moving it would re-scope it under
+  students who had already submitted, so `PUT` accepts neither field; re-create instead.
+- **A teacher sees only assignments they created**, in both the list and the single-item view — a
+  colleague's assignment returns 404. Grading and editing are already restricted to your own work, so
+  a broader read view would only expose other teachers' unpublished drafts.
 
 ## Project Structure
 

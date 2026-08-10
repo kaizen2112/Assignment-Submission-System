@@ -66,6 +66,25 @@ public sealed class Assignment
         };
     }
 
+    // ClassId, SubjectId and CreatedByTeacherId are deliberately absent: moving an assignment to
+    // another class would re-scope it under every student who already submitted, and changing the
+    // author would hand ownership to a teacher who never agreed to it. Re-creating is the honest
+    // way to do either.
+    public void Update(
+        string title,
+        string description,
+        DateTime deadline,
+        int maxMarks,
+        bool allowLateSubmission)
+    {
+        Title = title;
+        Description = description;
+        Deadline = deadline;
+        MaxMarks = maxMarks;
+        AllowLateSubmission = allowLateSubmission;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     // Publishing is the exact moment students can see this (rule 6), which is why it is a named
     // transition rather than a settable Status. Idempotent, so re-publishing is a no-op instead
     // of a spurious UpdatedAt bump. Authorization happens in the service, above this.
