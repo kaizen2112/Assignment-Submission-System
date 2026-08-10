@@ -45,4 +45,18 @@ public sealed class User
             CreatedAt = DateTime.UtcNow
         };
     }
+
+    // Admin-driven edit. The hash is deliberately not a parameter: bundling it here would mean every
+    // profile edit had to supply one, and the caller that had none would be tempted to pass the
+    // existing value back through — a plaintext round trip waiting to happen.
+    public void Update(string fullName, string email, Role role)
+    {
+        FullName = fullName;
+        Email = email;
+        Role = role;
+    }
+
+    // Takes an already-hashed value: hashing lives in Infrastructure, and this entity must never see
+    // a plaintext password it could accidentally persist.
+    public void SetPasswordHash(string passwordHash) => PasswordHash = passwordHash;
 }

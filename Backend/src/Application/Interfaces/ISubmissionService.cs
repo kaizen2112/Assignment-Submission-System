@@ -15,6 +15,13 @@ public interface ISubmissionService
         PagedQueryParameters query,
         CancellationToken cancellationToken = default);
 
+    // Every submission in the system, unscoped — for GET /admin/submissions. Lives here rather than
+    // in AdminService so it shares the mapper with the other submission reads; the Admin-only
+    // guarantee comes from [Authorize(Roles = "Admin")] on the controller.
+    Task<Result<PagedResult<SubmissionResponse>>> GetAllForAdminAsync(
+        PagedQueryParameters query,
+        CancellationToken cancellationToken = default);
+
     Task<Result<SubmissionResponse>> SubmitAsync(
         Guid assignmentId,
         SubmitAnswerRequest request,

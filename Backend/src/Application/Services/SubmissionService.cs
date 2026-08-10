@@ -89,6 +89,25 @@ public sealed class SubmissionService : ISubmissionService
             page.Map(s => ToResponse(s, access.Value.Title, access.Value.MaxMarks)));
     }
 
+    public async Task<Result<PagedResult<SubmissionResponse>>> GetAllForAdminAsync(
+        PagedQueryParameters query,
+        CancellationToken cancellationToken = default)
+    {
+        var pagination = query.ToPagination();
+
+        var paginationCheck = pagination.Validate();
+        if (!paginationCheck.IsSuccess)
+        {
+            return Fail<PagedResult<SubmissionResponse>>(paginationCheck.Error!, paginationCheck.ErrorType);
+        }
+
+        // No role branch and no scoping: the repository query eager-loads Assignment and Student, so
+        // the standard mapper works and every row is returned as-is.
+        var page = await _submissions.GetPagedForAdminAsync(pagination, cancellationToken);
+
+        return Result<PagedResult<SubmissionResponse>>.Success(page.Map(ToResponse));
+    }
+
     public async Task<Result<SubmissionResponse>> SubmitAsync(
         Guid assignmentId,
         SubmitAnswerRequest request,
