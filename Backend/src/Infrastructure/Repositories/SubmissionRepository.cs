@@ -28,6 +28,7 @@ public sealed class SubmissionRepository : ISubmissionRepository
         CancellationToken cancellationToken = default) =>
         _context.Submissions
             .Include(s => s.Assignment)
+            .Include(s => s.Student)
             .FirstOrDefaultAsync(
                 s => s.AssignmentId == assignmentId && s.StudentId == studentId,
                 cancellationToken);
