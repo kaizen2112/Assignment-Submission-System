@@ -1,0 +1,73 @@
+name: CI
+
+# Every push, plus every pull request into main. A push to a branch that has an open PR triggers
+# both, which the concurrency group below collapses into one run.
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend — build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      # Every step below runs in ./Backend, where AssignmentSystem.sln lives. The capital B matters:
+      # these runners are Linux and case-sensitive, unlike the Windows machine this was written on.
+      - name: Restore
+        run: dotnet restore
+        working-directory: Backend
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+        working-directory: Backend
+
+      # The 78 unit tests are pure Moq — no Postgres service is needed here, which is why this job
+      # has no `services:` block.
+      - name: Test
+        run: dotnet test --no-build --configuration Release --verbosity normal
+        working-directory: Backend
+
+  frontend:
+    name: Frontend — typecheck, lint and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: Frontend/package-lock.json
+
+      # `npm ci` not `npm install`: it installs exactly the lockfile and fails if package.json and
+      # the lockfile disagree, so CI cannot silently drift onto a different dependency version.
+      - name: Install
+        run: npm ci
+        working-directory: Frontend
+
+      # Separate from the build because Next 16 removed lint-during-build, and because a type error
+      # and a lint error should be distinguishable at a glance in the job log.
+      - name: Typecheck
+        run: npm run typecheck
+        working-directory: Frontend
+
+      - name: Lint
+        run: npm run lint
+        working-directory: Frontend
+
+      - name: Build
+        run: npm run build
+        working-directory: Frontend

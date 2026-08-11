@@ -1,0 +1,90 @@
+# One-command setup:  docker compose up --build
+#
+# Every value uses the ${VAR:-default} form, so this works on a fresh clone with no .env file. Copy
+# .env.example to .env to override any of them. The defaults are local-demo credentials, stated
+# openly rather than hidden — the same choice appsettings.Development.json already makes.
+
+name: assignment-system
+
+services:
+  # --- database ---------------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-assignment_system}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      # Named volume, not a bind mount: the data survives `docker compose down` and restarts, and
+      # `docker compose down -v` is the deliberate way to wipe it and re-seed from scratch.
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # pg_isready ships with the postgres image. Postgres accepts connections briefly during its
+      # own init and then restarts, so "the port is open" is not the same as "ready" — this asks the
+      # server directly, which is what makes the api's depends_on condition trustworthy.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-assignment_system}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+    # No `ports:` on purpose. Publishing 5432 would collide with a Postgres installed on the host.
+    # docker-compose.override.yml exposes it on 5433 for local inspection.
+
+  # --- API --------------------------------------------------------------------------------------
+  api:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    environment:
+      # Development enables Swagger and the migrate-then-seed block in Program.cs. That block is what
+      # makes this a genuinely single command: no separate `dotnet ef database update`, and the demo
+      # accounts exist on first boot.
+      ASPNETCORE_ENVIRONMENT: Development
+      # __ is .NET's separator for nested configuration keys, so this fills ConnectionStrings:Default.
+      ConnectionStrings__Default: ${DATABASE_URL:-Host=db;Port=5432;Database=assignment_system;Username=postgres;Password=postgres}
+      JwtSettings__Key: ${JWT_KEY:-local-docker-only-signing-key-do-not-use-in-production-0123456789}
+      JwtSettings__Issuer: ${JWT_ISSUER:-AssignmentSystemApi}
+      JwtSettings__Audience: ${JWT_AUDIENCE:-AssignmentSystemClient}
+      # __0 is the first element of the Cors:AllowedOrigins array. Set explicitly rather than relying
+      # on appsettings.Development.json, so the allowed origin is visible where the port is chosen.
+      Cors__AllowedOrigins__0: ${FRONTEND_ORIGIN:-http://localhost:3000}
+    ports:
+      - "${API_PORT:-5000}:8080"
+    depends_on:
+      db:
+        # Not just "started": the API migrates the database on boot, so a db that is still
+        # initialising means a crash loop instead of a clean start.
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      # Migrating and seeding on first boot takes a few seconds; failures before this elapses do not
+      # count against `retries`.
+      start_period: 30s
+    restart: unless-stopped
+
+  # --- web --------------------------------------------------------------------------------------
+  web:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+      args:
+        # A build arg, not an environment variable. `next build` inlines NEXT_PUBLIC_* into the
+        # browser bundle and freezes it there, so setting this at runtime would have no effect.
+        # It is a *host* URL because the browser makes the call — the web container never does.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:5000/api/v1}
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    depends_on:
+      api:
+        # The site would load without this — all API calls come from the browser, not from this
+        # container. Waiting anyway means `docker compose up` finishing implies a working app rather
+        # than a login page that errors for the first few seconds.
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

@@ -1,0 +1,16 @@
+# Excluded from the build context. bin/ and obj/ are the dangerous ones: they hold Windows-built
+# artifacts, and copying them over the Linux build's output produces confusing failures where a
+# stale DLL wins over freshly compiled source.
+
+**/bin
+**/obj
+**/TestResults
+*.user
+*.suo
+.vs
+
+# The image publishes Api only; the test project is compiled by CI, not by Docker.
+tests
+
+Dockerfile
+.dockerignore

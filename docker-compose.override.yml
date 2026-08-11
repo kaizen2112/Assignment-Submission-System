@@ -1,0 +1,30 @@
+# Local development conveniences. Compose merges this on top of docker-compose.yml automatically —
+# no -f flag needed — so anything here must stay safe for a plain `docker compose up --build`.
+# To run the stack exactly as an evaluator would, skipping this file:
+#
+#   docker compose -f docker-compose.yml up --build
+#
+# Note on hot reload: there is deliberately no source bind-mount + `dotnet watch` / `next dev` setup
+# here. Both would need the heavier SDK images, and file watching across the Windows/WSL2 boundary is
+# slow and misses events — Next's own docs recommend running `npm run dev` natively on Windows rather
+# than in Docker. The faster loop is the reverse of what it looks like: run only the database in
+# Docker, and the two apps natively.
+#
+#   docker compose up db          # container Postgres, reachable on host 5433
+#   dotnet run --project Backend/src/Api
+#   cd Frontend && npm run dev
+
+services:
+  db:
+    ports:
+      # 5433, not 5432: a Postgres installed on the host already owns 5432, and publishing the same
+      # port twice fails with "port is already allocated". Connect with:
+      #   psql -h localhost -p 5433 -U postgres -d assignment_system
+      - "${DB_PORT:-5433}:5432"
+
+  api:
+    volumes:
+      # Edit logging or any other setting, then `docker compose restart api` — no image rebuild.
+      # Environment variables are read *after* json files by the .NET configuration builder, so the
+      # connection string and JWT key set in docker-compose.yml still win over this file's values.
+      - ./Backend/src/Api/appsettings.Development.json:/app/appsettings.Development.json:ro

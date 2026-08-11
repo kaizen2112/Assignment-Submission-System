@@ -1,0 +1,29 @@
+# Everything listed here is excluded from the build context — the tarball Docker uploads to the
+# daemon before the first instruction runs. node_modules and .next alone are ~700 MB on this project,
+# and both are rebuilt inside the image anyway, so shipping them wastes the whole upload.
+
+node_modules
+.next
+out
+
+# Local env files must never reach the image. `process.env` outranks .env.local in Next's load order,
+# so the build ARG would win anyway — but these files hold developer-specific values that have no
+# business inside a container, and one of them points NEXT_PUBLIC_API_URL at the non-Docker port.
+.env
+.env.local
+.env.*.local
+
+# Build/tool leftovers with no meaning inside the image.
+*.tsbuildinfo
+.eslintcache
+npm-debug.log*
+
+# Agent instructions and IDE state.
+AGENTS.md
+CLAUDE.md
+.vscode
+.idea
+
+# Dockerfile itself: changing a comment in it would otherwise invalidate the context hash.
+Dockerfile
+.dockerignore
