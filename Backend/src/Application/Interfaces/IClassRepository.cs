@@ -52,6 +52,15 @@ public interface IClassRepository
         PaginationQuery pagination,
         CancellationToken cancellationToken = default);
 
+    // The roster of a single class, for the admin screens. GetTeachingScopePagedAsync above answers the
+    // teacher's question ("what may I touch?"); this answers the admin's ("who teaches in here?"), which
+    // nothing could before — leaving the assign-teacher form unable to show its own effect. Includes
+    // Teacher and Subject because the response needs names, not ids.
+    Task<PagedResult<TeacherAssignment>> GetClassTeacherAssignmentsPagedAsync(
+        Guid classId,
+        PaginationQuery pagination,
+        CancellationToken cancellationToken = default);
+
     Task AddTeacherAssignmentAsync(
         TeacherAssignment teacherAssignment,
         CancellationToken cancellationToken = default);
@@ -66,6 +75,13 @@ public interface IClassRepository
     Task<bool> EnrollmentExistsAsync(
         Guid studentId,
         Guid classId,
+        CancellationToken cancellationToken = default);
+
+    // The enrollment counterpart of the roster read above. GetEnrolledClassIdsAsync answers rule 3 for
+    // one student; this lists a class's students so an admin can see an enrollment actually landed.
+    Task<PagedResult<StudentEnrollment>> GetClassEnrollmentsPagedAsync(
+        Guid classId,
+        PaginationQuery pagination,
         CancellationToken cancellationToken = default);
 
     Task AddEnrollmentAsync(

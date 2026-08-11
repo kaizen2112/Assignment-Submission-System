@@ -85,6 +85,127 @@ export const submissionSchema = z.object({
 
 export type SubmissionValues = z.infer<typeof submissionSchema>;
 
+// --- Admin: users --------------------------------------------------------------------------------
+
+// From UserRules in Backend/src/Application/Validators/Admin/UserValidators.cs.
+export const FULL_NAME_MAX = 200;
+export const EMAIL_MAX = 256;
+export const PASSWORD_MIN = 8;
+
+// 72 because BCrypt silently truncates beyond 72 bytes — two longer passwords could share a hash.
+export const PASSWORD_MAX = 72;
+
+// The backend's rule is deliberately mild: a length floor plus a letter and a digit. Reproduced exactly,
+// so the demo credentials in the README satisfy both halves.
+const HAS_LETTER = /[A-Za-z]/;
+const HAS_DIGIT = /\d/;
+
+// `allowEmpty` is what makes the edit form's "leave the password alone" case legal. An empty field is
+// dropped from the request body entirely (UpdateUserRequest.newPassword is optional), so it must not be
+// measured against the length floor — while a *filled* field is held to every rule.
+function passwordField(allowEmpty: boolean) {
+  const skip = (value: string) => allowEmpty && value === "";
+
+  return z
+    .string()
+    .refine(
+      (value) => skip(value) || value.length >= PASSWORD_MIN,
+      `Password must be at least ${PASSWORD_MIN} characters.`,
+    )
+    .refine(
+      (value) => skip(value) || value.length <= PASSWORD_MAX,
+      `Password cannot exceed ${PASSWORD_MAX} characters.`,
+    )
+    .refine(
+      (value) => skip(value) || (HAS_LETTER.test(value) && HAS_DIGIT.test(value)),
+      "Password must contain at least one letter and one digit.",
+    );
+}
+
+const userBase = z.object({
+  fullName: z
+    .string()
+    .trim()
+    .min(1, "Full name is required.")
+    .max(FULL_NAME_MAX, `Full name cannot exceed ${FULL_NAME_MAX} characters.`),
+
+  email: z
+    .email("Enter a valid email address.")
+    .trim()
+    .max(EMAIL_MAX, `Email cannot exceed ${EMAIL_MAX} characters.`),
+
+  // Parsed case-sensitively by the backend (Enum.TryParse with ignoreCase: false), so these are the
+  // exact three strings it accepts — "teacher" would be a 400.
+  role: z.enum(["Admin", "Teacher", "Student"], { error: "Choose a role." }),
+});
+
+export const createUserSchema = userBase.extend({ password: passwordField(false) });
+
+export const updateUserSchema = userBase.extend({ newPassword: passwordField(true) });
+
+export type CreateUserValues = z.infer<typeof createUserSchema>;
+export type UpdateUserValues = z.infer<typeof updateUserSchema>;
+
+// The three fields create and edit share, for the UserFields component. Both value types above extend
+// this one — see the note in AssignmentFields.tsx for why the shared component reads the base type.
+export type UserBaseValues = z.infer<typeof userBase>;
+
+// --- Admin: classes and subjects ------------------------------------------------------------------
+
+// From CreateClassValidator and CreateSubjectValidator — these match the varchar widths in docs/02.
+export const CLASS_NAME_MAX = 100;
+export const CLASS_CODE_MAX = 20;
+export const SUBJECT_NAME_MAX = 100;
+
+const CLASS_CODE_PATTERN = /^[A-Za-z0-9-]+$/;
+
+export const classSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Name is required.")
+    .max(CLASS_NAME_MAX, `Name cannot exceed ${CLASS_NAME_MAX} characters.`),
+
+  // A code is a handle people type and compare ("10A"). The backend rejects spaces and punctuation so
+  // that "10 A" and "10-A" cannot coexist as classes nobody can tell apart.
+  code: z
+    .string()
+    .trim()
+    .min(1, "Code is required.")
+    .max(CLASS_CODE_MAX, `Code cannot exceed ${CLASS_CODE_MAX} characters.`)
+    .regex(CLASS_CODE_PATTERN, "Code may contain only letters, digits and hyphens."),
+});
+
+export const subjectSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Subject name is required.")
+    .max(SUBJECT_NAME_MAX, `Name cannot exceed ${SUBJECT_NAME_MAX} characters.`),
+});
+
+export type ClassValues = z.infer<typeof classSchema>;
+export type SubjectValues = z.infer<typeof subjectSchema>;
+
+// --- Admin: teacher assignments and enrolments ----------------------------------------------------
+
+// Both fields come from dropdowns of ids the API itself returned, so these are min(1) "did you choose
+// one?" checks rather than uuid format checks — a malformed id could only come from a tampered DOM, and
+// the server answers that with a 400 of its own.
+export const teacherAssignmentSchema = z.object({
+  teacherId: z.string().min(1, "Choose a teacher."),
+  // One field, not two: the picker offers subjects that already belong to the class, because the
+  // backend rejects a subject/class mismatch with a 400.
+  subjectId: z.string().min(1, "Choose a subject."),
+});
+
+export const enrolmentSchema = z.object({
+  studentId: z.string().min(1, "Choose a student."),
+});
+
+export type TeacherAssignmentValues = z.infer<typeof teacherAssignmentSchema>;
+export type EnrolmentValues = z.infer<typeof enrolmentSchema>;
+
 // --- Grading -------------------------------------------------------------------------------------
 
 // From GradeSubmissionValidator.FeedbackMaxLength.

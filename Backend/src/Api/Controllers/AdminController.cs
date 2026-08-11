@@ -165,6 +165,36 @@ public sealed class AdminController : ControllerBase
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult();
     }
 
+    // The read halves of the two POSTs above. A 404 here means the class id is unknown — not that the
+    // roster is empty, which is a 200 with items: [].
+    [HttpGet("classes/{id:guid}/teachers")]
+    [ProducesResponseType(typeof(PagedResult<TeacherAssignmentResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetClassTeachers(
+        Guid id,
+        [FromQuery] PagedQueryParameters query,
+        CancellationToken ct)
+    {
+        var result = await _admin.GetClassTeachersAsync(id, query, ct);
+
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult();
+    }
+
+    [HttpGet("classes/{id:guid}/students")]
+    [ProducesResponseType(typeof(PagedResult<EnrollmentResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetClassStudents(
+        Guid id,
+        [FromQuery] PagedQueryParameters query,
+        CancellationToken ct)
+    {
+        var result = await _admin.GetClassStudentsAsync(id, query, ct);
+
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult();
+    }
+
     // --- Read-only oversight ----------------------------------------------------------------------
 
     // Unscoped by role: AssignmentService resolves an Admin caller to the unfiltered query, so drafts

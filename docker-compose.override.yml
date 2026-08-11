@@ -23,6 +23,14 @@ services:
       - "${DB_PORT:-5433}:5432"
 
   api:
+    environment:
+      # Running `npm run dev` while the web container holds port 3000 makes Next fall back to 3001,
+      # then 3002 — and a different port is a different origin, so CORS blocks every call and login
+      # fails with "Failed to fetch". Allowing the usual fallbacks means the dev server works against
+      # this API whichever port it lands on. Index 0 is set in docker-compose.yml; these extend that
+      # array rather than replacing it.
+      Cors__AllowedOrigins__1: http://localhost:3001
+      Cors__AllowedOrigins__2: http://localhost:3002
     volumes:
       # Edit logging or any other setting, then `docker compose restart api` — no image rebuild.
       # Environment variables are read *after* json files by the .NET configuration builder, so the

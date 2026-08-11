@@ -82,6 +82,22 @@ public sealed class ClassRepository : IClassRepository
             .ThenBy(ta => ta.Id)
             .ToPagedResultAsync(pagination, cancellationToken);
 
+    // Class is deliberately not Included: the calling service has already loaded it to answer 404 for an
+    // unknown id, so joining it again here would fetch a name it is holding anyway.
+    public Task<PagedResult<TeacherAssignment>> GetClassTeacherAssignmentsPagedAsync(
+        Guid classId,
+        PaginationQuery pagination,
+        CancellationToken cancellationToken = default) =>
+        _context.TeacherAssignments
+            .AsNoTracking()
+            .Where(ta => ta.ClassId == classId)
+            .Include(ta => ta.Teacher)
+            .Include(ta => ta.Subject)
+            .OrderBy(ta => ta.Subject.Name)
+            .ThenBy(ta => ta.Teacher.FullName)
+            .ThenBy(ta => ta.Id)
+            .ToPagedResultAsync(pagination, cancellationToken);
+
     public async Task AddTeacherAssignmentAsync(
         TeacherAssignment teacherAssignment,
         CancellationToken cancellationToken = default) =>
@@ -106,6 +122,20 @@ public sealed class ClassRepository : IClassRepository
         _context.StudentEnrollments.AnyAsync(
             e => e.StudentId == studentId && e.ClassId == classId,
             cancellationToken);
+
+    // Sorted by name rather than EnrolledAt: a class roster is something an admin reads down looking for
+    // a person, not a chronological log of who joined when.
+    public Task<PagedResult<StudentEnrollment>> GetClassEnrollmentsPagedAsync(
+        Guid classId,
+        PaginationQuery pagination,
+        CancellationToken cancellationToken = default) =>
+        _context.StudentEnrollments
+            .AsNoTracking()
+            .Where(e => e.ClassId == classId)
+            .Include(e => e.Student)
+            .OrderBy(e => e.Student.FullName)
+            .ThenBy(e => e.Id)
+            .ToPagedResultAsync(pagination, cancellationToken);
 
     public async Task AddEnrollmentAsync(
         StudentEnrollment enrollment,

@@ -44,4 +44,17 @@ public interface IAdminService
     Task<Result<EnrollmentResponse>> EnrollStudentAsync(
         CreateEnrollmentRequest request,
         CancellationToken cancellationToken = default);
+
+    // The read halves of AssignTeacherAsync and EnrollStudentAsync. Without these the two grants that
+    // drive rules 3 and 4 could be created but never listed, so an admin had no way to confirm one had
+    // taken effect — or to see why a second attempt came back 409.
+    Task<Result<PagedResult<TeacherAssignmentResponse>>> GetClassTeachersAsync(
+        Guid classId,
+        PagedQueryParameters query,
+        CancellationToken cancellationToken = default);
+
+    Task<Result<PagedResult<EnrollmentResponse>>> GetClassStudentsAsync(
+        Guid classId,
+        PagedQueryParameters query,
+        CancellationToken cancellationToken = default);
 }

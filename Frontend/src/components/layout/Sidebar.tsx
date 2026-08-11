@@ -16,8 +16,17 @@ interface NavItem {
 //
 // This is presentation, not security. The backend rejects a Student calling a teacher endpoint whether
 // or not a link to it was ever drawn.
+//
+// The admin entries cover every admin endpoint the API has, so administration never needs Swagger.
+// Users and Classes are where the work happens; the last two are read-only oversight.
 const NAV: Record<Role, NavItem[]> = {
-  Admin: [{ href: "/admin/dashboard", label: "Dashboard" }],
+  Admin: [
+    { href: "/admin/dashboard", label: "Dashboard" },
+    { href: "/admin/users", label: "Users" },
+    { href: "/admin/classes", label: "Classes" },
+    { href: "/admin/assignments", label: "All assignments" },
+    { href: "/admin/submissions", label: "All submissions" },
+  ],
   Teacher: [
     { href: "/teacher/dashboard", label: "Dashboard" },
     { href: "/teacher/assignments", label: "Assignments" },

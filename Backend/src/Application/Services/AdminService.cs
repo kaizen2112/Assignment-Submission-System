@@ -334,6 +334,78 @@ public sealed class AdminService : IAdminService
             enrollment.EnrolledAt));
     }
 
+    // --- Class rosters ----------------------------------------------------------------------------
+
+    public async Task<Result<PagedResult<TeacherAssignmentResponse>>> GetClassTeachersAsync(
+        Guid classId,
+        PagedQueryParameters query,
+        CancellationToken cancellationToken = default)
+    {
+        var pagination = query.ToPagination();
+
+        // Checked before the class lookup, matching every other list endpoint: an out-of-range pageSize
+        // is the caller's mistake whether or not the class turns out to exist.
+        var check = pagination.Validate();
+        if (!check.IsSuccess)
+        {
+            return Result<PagedResult<TeacherAssignmentResponse>>.Failure(check.Error!, check.ErrorType);
+        }
+
+        var @class = await _classes.GetByIdAsync(classId, cancellationToken);
+        if (@class is null)
+        {
+            return Result<PagedResult<TeacherAssignmentResponse>>.Failure(
+                "Class not found.", ErrorType.NotFound);
+        }
+
+        var page = await _classes.GetClassTeacherAssignmentsPagedAsync(
+            classId, pagination, cancellationToken);
+
+        // The class name comes from the entity loaded above rather than from a navigation on each row —
+        // every row in this page belongs to the same class by definition.
+        return Result<PagedResult<TeacherAssignmentResponse>>.Success(page.Map(ta =>
+            new TeacherAssignmentResponse(
+                ta.Id,
+                ta.TeacherId,
+                ta.Teacher.FullName,
+                ta.SubjectId,
+                ta.Subject.Name,
+                @class.Id,
+                @class.Name,
+                ta.AssignedAt)));
+    }
+
+    public async Task<Result<PagedResult<EnrollmentResponse>>> GetClassStudentsAsync(
+        Guid classId,
+        PagedQueryParameters query,
+        CancellationToken cancellationToken = default)
+    {
+        var pagination = query.ToPagination();
+
+        var check = pagination.Validate();
+        if (!check.IsSuccess)
+        {
+            return Result<PagedResult<EnrollmentResponse>>.Failure(check.Error!, check.ErrorType);
+        }
+
+        var @class = await _classes.GetByIdAsync(classId, cancellationToken);
+        if (@class is null)
+        {
+            return Result<PagedResult<EnrollmentResponse>>.Failure("Class not found.", ErrorType.NotFound);
+        }
+
+        var page = await _classes.GetClassEnrollmentsPagedAsync(classId, pagination, cancellationToken);
+
+        return Result<PagedResult<EnrollmentResponse>>.Success(page.Map(e =>
+            new EnrollmentResponse(
+                e.Id,
+                e.StudentId,
+                e.Student.FullName,
+                @class.Id,
+                @class.Name,
+                e.EnrolledAt)));
+    }
+
     // --- Mapping ----------------------------------------------------------------------------------
 
     private static UserResponse ToResponse(User user) =>

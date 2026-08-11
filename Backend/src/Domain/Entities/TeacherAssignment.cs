@@ -14,7 +14,9 @@ public sealed class TeacherAssignment
     public Guid Id { get; private set; }
 
     public Guid TeacherId { get; private set; }
-    public User Teacher { get; private set; } = null!;
+    // internal set for the same reason as Subject and Class below: the admin roster response reads
+    // Teacher.FullName, so a unit test has to be able to arrange the graph EF would have materialized.
+    public User Teacher { get; internal set; } = null!;
 
     public Guid SubjectId { get; private set; }
     // internal set, like the four navigations on Assignment and Submission: EF fills these, no factory

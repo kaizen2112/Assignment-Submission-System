@@ -94,9 +94,10 @@ public sealed class RoleGuardTests
 
     [Fact]
     public void AdminController_CoversEveryEndpointInTheDocs()
-        // docs/04 lists 11 admin endpoints. If one is added without a guard, the count check above
-        // still passes for the others — this pins that the set itself is complete.
-        => ActionsOf<AdminController>().Should().HaveCount(11);
+        // docs/04 lists 13 admin endpoints — the original 11 plus the two class-roster reads added for
+        // the admin UI. If one is added without a guard, the count check above still passes for the
+        // others; this pins that the set itself is complete.
+        => ActionsOf<AdminController>().Should().HaveCount(13);
 
     // =============================================================================================
     // StudentRole_HitsTeacherEndpoint_Returns403 — the attribute contract on the feature controllers

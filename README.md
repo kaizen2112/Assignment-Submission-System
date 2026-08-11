@@ -14,6 +14,10 @@ docker compose up --build
 Then open **http://localhost:3000** and sign in with any account from
 [Demo Credentials](#demo-credentials). No `.env` file, no database setup, no migration step.
 
+> 📋 **[WALKTHROUGH.md](WALKTHROUGH.md)** is a step-by-step tour of every feature — set up a school as
+> Admin, publish an assignment as Teacher, submit as Student, grade it, then deliberately try to break
+> all 8 business rules. Copy-pasteable data and an expected outcome for each step.
+
 ---
 
 ## Overview
@@ -38,9 +42,12 @@ frontend is treated as untrusted. Hiding a button is presentation; returning `40
   failures and framework model-binding failures alike.
 - **Seeded demo data** on first boot: 6 users, 2 classes, 3 subjects, 3 assignments, 3 submissions,
   arranged so the scoping rules can be probed by hand.
+- **A complete web UI for all three roles**, including administration — creating users, classes and
+  subjects, granting teachers their class + subject, and enrolling students are all screens. Swagger is
+  there to inspect the API, not because anything requires it.
 - **Swagger UI** with a working **Authorize** button, so every endpoint can be exercised from a
   browser.
-- **78 unit tests** covering all 8 business rules and the role guards.
+- **85 unit tests** covering all 8 business rules and the role guards.
 - **One-command Docker setup** and **GitHub Actions CI** on every push.
 
 ---
@@ -126,6 +133,9 @@ The admin builds the structure everyone else operates inside — without a teach
 teacher can author anything, and without an enrolment no student sees anything. But an admin holds no
 teaching scope of their own, so **A6** falls out of rule 4 rather than being a separate restriction.
 
+Every one of these is a screen in the web app under `/admin` — users, classes, and read-only oversight
+of all assignments and submissions. There is nothing an administrator has to open Swagger to do.
+
 ### Permission matrix
 
 | Action | Admin | Teacher | Student | Enforced by |
@@ -134,6 +144,7 @@ teaching scope of their own, so **A6** falls out of rule 4 rather than being a s
 | Create, update, delete users | ✅ | ❌ | ❌ | `[Authorize(Roles="Admin")]` |
 | Create classes, subjects, enrolments | ✅ | ❌ | ❌ | `[Authorize(Roles="Admin")]` |
 | Assign a teacher to class + subject | ✅ | ❌ | ❌ | `[Authorize(Roles="Admin")]` |
+| List a class's teachers and students | ✅ | ❌ | ❌ | `[Authorize(Roles="Admin")]` |
 | Read **every** assignment / submission | ✅ | ❌ | ❌ | admin endpoints, unscoped |
 | Read own teaching scope | ❌ | ✅ | ❌ | rule 4 |
 | Create / edit / delete an assignment | ❌ | own scope | ❌ | rule 4, A12, A13 |
@@ -239,7 +250,7 @@ Domain          entities and enums — zero dependencies
 ```
 
 `Application` declares the repository *interfaces*; `Infrastructure` implements them. That inversion
-is what lets 78 tests run against `Moq` doubles with no database.
+is what lets 85 tests run against `Moq` doubles with no database.
 
 Services return `Result<T>` rather than throwing for expected failures, and controllers translate
 that into HTTP through a single `ToProblemResult()` mapper — so status codes are decided in one place.
@@ -282,7 +293,7 @@ Assignment-Submission-System/
 │   │       ├── Services/           # CurrentUserService
 │   │       └── Program.cs          # DI, CORS, JWT, Swagger, migrate + seed, /health
 │   └── tests/UnitTests/
-│       ├── Services/               # AssignmentServiceTests, SubmissionServiceTests
+│       ├── Services/               # AssignmentServiceTests, SubmissionServiceTests, AdminServiceTests
 │       ├── Authorization/          # RoleGuardTests (reflects over [Authorize])
 │       └── Helpers/                # EntityBuilders, MockRepositoryHelper
 │
@@ -293,13 +304,14 @@ Assignment-Submission-System/
         ├── proxy.ts                # role-based route guard (Next 16 renamed middleware → proxy)
         ├── app/
         │   ├── (auth)/login/
-        │   ├── admin/dashboard/
+        │   ├── admin/              # dashboard, users, users/new, users/[id]/edit,
+        │   │                       # classes, classes/[id], assignments, submissions
         │   ├── teacher/            # dashboard, assignments, new, [id]/edit,
         │   │                       # [id]/submissions, [id]/submissions/[submissionId]
         │   └── student/            # dashboard, assignments, assignments/[id], submissions
-        ├── components/             # layout/, ui/, teacher/, student/
+        ├── components/             # layout/, ui/, admin/, teacher/, student/
         ├── hooks/                  # useAsync, useHydrated
-        ├── lib/                    # api client, auth, schemas, assignments, dashboard, utils
+        ├── lib/                    # api client, auth, schemas, admin, assignments, dashboard, utils
         └── types/                  # api.ts — response shapes
 ```
 
@@ -617,7 +629,7 @@ cd Backend
 dotnet test
 ```
 
-**78 tests, all passing.** They are pure unit tests using Moq — **no database or running API is
+**85 tests, all passing.** They are pure unit tests using Moq — **no database or running API is
 required**, which is why CI needs no PostgreSQL service.
 
 ```bash
@@ -684,22 +696,30 @@ from the browser.
 
 ### Admin — `/api/v1/admin`
 
-All 11 are Admin-only; the `[Authorize(Roles = "Admin")]` attribute is on the **class**, so any
-endpoint added later is Admin-only by default.
+All 13 are Admin-only; the `[Authorize(Roles = "Admin")]` attribute is on the **class**, so any
+endpoint added later is Admin-only by default. Every one of them has a screen under `/admin` in the
+web app — administration never requires Swagger.
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/users` | Paged users |
+| GET | `/users` | Paged users, filterable by `role` and `search` |
 | POST | `/users` | Create a user in any role |
-| PUT | `/users/{id}` | Update a user (including role changes) |
+| PUT | `/users/{id}` | Update a user (including role changes and password resets) |
 | DELETE | `/users/{id}` | Delete — refused with 409 if the user has academic records |
 | GET | `/classes` | Paged classes with their subjects |
 | POST | `/classes` | Create a class |
 | POST | `/classes/{id}/subjects` | Add a subject to a class |
 | POST | `/teacher-assignments` | Assign a teacher to a class + subject |
 | POST | `/enrollments` | Enrol a student in a class |
+| GET | `/classes/{id}/teachers` | Paged teacher grants for one class |
+| GET | `/classes/{id}/students` | Paged enrolled students for one class |
 | GET | `/assignments` | Every assignment, unscoped |
 | GET | `/submissions` | Every submission, unscoped |
+
+The two `/classes/{id}/...` reads are the listing halves of `POST /teacher-assignments` and
+`POST /enrollments`. Both return `404` for an unknown class id and `200` with `items: []` for a real
+class whose roster is empty — the admin UI leans on that difference to say "no such class" rather than
+"nobody assigned yet".
 
 ### Conventions
 
@@ -796,10 +816,17 @@ deliberate scope or time trade-off.
 
 **Functional**
 
-- **No Admin management UI.** All 11 admin endpoints exist and are tested, but the frontend gives
-  Admin only a dashboard — user, class and enrolment management must be done through Swagger.
-- **No file uploads** (A3), **no notifications**, **no password reset**, and no self-registration —
-  accounts are created by an admin.
+- **No delete for classes, subjects, teacher grants or enrolments.** The API has no endpoint for any of
+  them, so the admin UI has no button. Each would either orphan or cascade-destroy student work, which
+  needs a decision about what "remove a student from a class they have submitted in" should mean —
+  A5's reasoning applied one level up. Users are the one thing that *can* be deleted, and only while
+  they have no academic records.
+- **Pickers are not searchable.** The teacher, student and class dropdowns load one page of 100
+  (`MAX_PAGE_SIZE`) and show it all. Past 100 accounts of a role, the picker silently stops offering
+  the rest and needs a typeahead backed by the existing `?search=` filter.
+- **No file uploads** (A3), **no notifications**, **no self-service password reset**, and no
+  self-registration — accounts are created by an admin, who can also reset a password from
+  `/admin/users/{id}/edit`.
 
 **Performance**
 
@@ -823,9 +850,10 @@ deliberate scope or time trade-off.
 
 **Testing**
 
-- **Unit tests only** — 78 of them, with mocked repositories. There are no integration tests against
+- **Unit tests only** — 85 of them, with mocked repositories. There are no integration tests against
   a real database, so EF query translation and the migrations are exercised by running the app rather
-  than by CI. The end-to-end flow was verified manually in a browser across all three roles.
+  than by CI. The end-to-end flow was verified in a browser across all three roles, including a full
+  admin pass that builds a class from nothing and then signs in as the teacher and student it created.
 
 **Operational**
 

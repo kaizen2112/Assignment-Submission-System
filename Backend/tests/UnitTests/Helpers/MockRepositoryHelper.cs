@@ -190,6 +190,35 @@ internal static class MockRepositoryHelper
         return mock;
     }
 
+    // The admin roster reads. Like WithTeachingScope, the setup matches one classId only — an
+    // It.IsAny<Guid>() setup would hand back the same roster for every class and quietly pass a service
+    // that ignored the id in the route.
+    internal static Mock<IClassRepository> WithClassTeachers(
+        this Mock<IClassRepository> mock,
+        Guid classId,
+        params TeacherAssignment[] teacherAssignments)
+    {
+        mock.Setup(r => r.GetClassTeacherAssignmentsPagedAsync(
+                classId, It.IsAny<PaginationQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PagedResult<TeacherAssignment>(
+                teacherAssignments, 1, PaginationQuery.DefaultPageSize, teacherAssignments.Length));
+
+        return mock;
+    }
+
+    internal static Mock<IClassRepository> WithClassStudents(
+        this Mock<IClassRepository> mock,
+        Guid classId,
+        params StudentEnrollment[] enrollments)
+    {
+        mock.Setup(r => r.GetClassEnrollmentsPagedAsync(
+                classId, It.IsAny<PaginationQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PagedResult<StudentEnrollment>(
+                enrollments, 1, PaginationQuery.DefaultPageSize, enrollments.Length));
+
+        return mock;
+    }
+
     // --- Users ----------------------------------------------------------------------------------
 
     internal static Mock<IUserRepository> UsersWith(params User[] users)
@@ -218,6 +247,7 @@ internal static class MockRepositoryHelper
         internal Mock<IClassRepository> Classes { get; init; } = new();
         internal Mock<IUserRepository> Users { get; init; } = new();
         internal Mock<ICurrentUserService> CurrentUser { get; init; } = new();
+        internal Mock<IPasswordHasher> PasswordHasher { get; init; } = new();
 
         // Asserts the obvious follow-up to any successful mutation: it was actually persisted.
         // Forgetting SaveChangesAsync produces a service that returns 200 and changes nothing.

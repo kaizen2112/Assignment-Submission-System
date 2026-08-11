@@ -137,6 +137,18 @@ internal static class EntityBuilders
         return teacherAssignment;
     }
 
+    // A student's place in a class. Student and Class are wired for the same reason as above: the admin
+    // roster response reads e.Student.FullName.
+    internal static StudentEnrollment Enrollment(User student, Class @class)
+    {
+        var enrollment = StudentEnrollment.Create(student.Id, @class.Id);
+
+        enrollment.Student = student;
+        enrollment.Class = @class;
+
+        return enrollment;
+    }
+
     // The one graph the service tests need most: an assignment plus the teacher who owns it, the
     // student enrolled in its class, and that student's submission — all ids already agreeing.
     internal static Scenario BuildScenario(

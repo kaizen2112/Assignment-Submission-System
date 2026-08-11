@@ -10,10 +10,13 @@ public sealed class StudentEnrollment
     public Guid Id { get; private set; }
 
     public Guid StudentId { get; private set; }
-    public User Student { get; private set; } = null!;
+    // internal set, like the navigations on TeacherAssignment: EF fills these and no factory does, but
+    // the admin roster response reads Student.FullName, so a unit test needs to arrange it. See
+    // Domain/AssemblyInfo.cs for why internal rather than public.
+    public User Student { get; internal set; } = null!;
 
     public Guid ClassId { get; private set; }
-    public Class Class { get; private set; } = null!;
+    public Class Class { get; internal set; } = null!;
 
     public DateTime EnrolledAt { get; private set; }
 
