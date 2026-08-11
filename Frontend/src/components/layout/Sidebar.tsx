@@ -22,7 +22,11 @@ const NAV: Record<Role, NavItem[]> = {
     { href: "/teacher/dashboard", label: "Dashboard" },
     { href: "/teacher/assignments", label: "Assignments" },
   ],
-  Student: [{ href: "/student/dashboard", label: "Dashboard" }],
+  Student: [
+    { href: "/student/dashboard", label: "Dashboard" },
+    { href: "/student/assignments", label: "Assignments" },
+    { href: "/student/submissions", label: "My submissions" },
+  ],
 };
 
 export function Sidebar({ role }: { role: Role }) {

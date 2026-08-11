@@ -67,6 +67,24 @@ export const createAssignmentSchema = assignmentSchema.extend({
 export type AssignmentValues = z.infer<typeof assignmentSchema>;
 export type CreateAssignmentValues = z.infer<typeof createAssignmentSchema>;
 
+// --- Submitting ----------------------------------------------------------------------------------
+
+// From SubmitAnswerValidator.AnswerMaxLength.
+export const ANSWER_MAX = 5000;
+
+export const submissionSchema = z.object({
+  // .trim() before .min(1) mirrors the backend: FluentValidation's NotEmpty() rejects whitespace-only
+  // strings for exactly the reason named there — three spaces is not an attempt at the work, but it
+  // would otherwise satisfy rule 1 and count as submitted on time.
+  answerText: z
+    .string()
+    .trim()
+    .min(1, "Write your answer before submitting.")
+    .max(ANSWER_MAX, `Your answer cannot exceed ${ANSWER_MAX} characters.`),
+});
+
+export type SubmissionValues = z.infer<typeof submissionSchema>;
+
 // --- Grading -------------------------------------------------------------------------------------
 
 // From GradeSubmissionValidator.FeedbackMaxLength.

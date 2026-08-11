@@ -1,4 +1,4 @@
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { MAX_PAGE_SIZE } from "@/types/api";
 import type {
   Assignment,
@@ -8,6 +8,7 @@ import type {
   GradeSubmissionRequest,
   PagedResult,
   Submission,
+  SubmitAnswerRequest,
   TeachingScope,
   UpdateAssignmentRequest,
 } from "@/types/api";
@@ -66,6 +67,61 @@ export const gradeSubmission = (
     `/assignments/${assignmentId}/submissions/${submissionId}/grade`,
     body,
   );
+
+// --- Student-facing submissions ------------------------------------------------------------------
+
+export const submitAnswer = (assignmentId: string, body: SubmitAnswerRequest) =>
+  api.post<Submission>(`/assignments/${assignmentId}/submissions`, body);
+
+export const updateMySubmission = (assignmentId: string, body: SubmitAnswerRequest) =>
+  api.put<Submission>(`/assignments/${assignmentId}/submissions/mine`, body);
+
+// 404 is the API's answer for "you have not submitted to this one" — an expected outcome, not an error,
+// so it maps to null rather than propagating. Same convention as lib/dashboard.ts.
+export async function getMySubmission(
+  assignmentId: string,
+  signal?: AbortSignal,
+): Promise<Submission | null> {
+  try {
+    return await api.get<Submission>(
+      `/assignments/${assignmentId}/submissions/mine`,
+      undefined,
+      signal,
+    );
+  } catch (error) {
+    if (error instanceof ApiError && error.isNotFound) return null;
+    throw error;
+  }
+}
+
+export interface MySubmissions {
+  items: Submission[];
+  // True when the assignment page was truncated, so this is a subset rather than everything.
+  approximate: boolean;
+}
+
+// Every submission this student has made.
+//
+// There is no `GET /submissions/mine` in the API — submissions are addressable only per assignment — so
+// this fans out one request per assignment, in parallel, capped at MAX_PAGE_SIZE. Same N+1 as the
+// dashboard stats, and flagged for the same Phase 6 fix: a student-scoped submissions list endpoint
+// would replace this with one paginated call. Deliberately not added during a frontend step, because
+// unlike the teaching-scope gap this one is merely inefficient rather than impossible.
+export async function getMySubmissions(signal?: AbortSignal): Promise<MySubmissions> {
+  const page = await listAssignments({ page: 1, pageSize: MAX_PAGE_SIZE }, signal);
+
+  const found = await Promise.all(
+    page.items.map((assignment) => getMySubmission(assignment.id, signal)),
+  );
+
+  return {
+    // Newest first: a student cares about what they just handed in, and about new marks.
+    items: found
+      .filter((s): s is Submission => s !== null)
+      .sort((a, b) => Date.parse(b.submittedAt) - Date.parse(a.submittedAt)),
+    approximate: page.totalCount > page.items.length,
+  };
+}
 
 // A single submission is only reachable through its assignment's list — there is no
 // GET /submissions/{id} for teachers. The grade page therefore finds its row by paging through the
