@@ -53,53 +53,98 @@ frontend is treated as untrusted. Hiding a button is presentation; returning `40
 | **Teacher** | Create, edit, publish and delete assignments **for the class + subject pairs they are assigned to**; see submissions for their own assignments; award marks and feedback |
 | **Student** | See **published** assignments for the classes they are enrolled in; submit one text answer per assignment; edit it until the deadline or until it is graded; read their marks and feedback |
 
-### Who can do what
+Everything below is enforced server-side. Rule and assumption references point at
+[Business Rules](#business-rules) and [Assumptions](#assumptions).
 
-Rule and assumption references point at [Business Rules](#business-rules) and
-[Assumptions](#assumptions). Every branch below is enforced server-side.
+### What a student can do
 
 ```mermaid
 flowchart TD
-    L["POST /auth/login<br/>email + password"] --> JWT{{"JWT access token<br/>carries a role claim"}}
-
-    JWT -->|role = Admin| A["ADMIN"]
-    JWT -->|role = Teacher| T["TEACHER"]
-    JWT -->|role = Student| S["STUDENT"]
-
-    subgraph ADM["Admin — sets the system up, never teaches"]
-        direction TB
-        A --> A1["Users: create, update,<br/>delete, in any role"]
-        A1 --> A9["Delete refused with 409 if the<br/>user has academic records · A9"]
-        A --> A2["Classes and subjects<br/>Teacher assignments<br/>Student enrolments"]
-        A2 --> A5["Read every assignment and<br/>submission, unscoped<br/>Cannot create or grade · A6"]
-    end
-
-    subgraph TCH["Teacher — scoped to assigned class + subject pairs"]
-        direction TB
-        T --> T1["Read own class + subject pairs<br/>GET /assignments/teaching-scope"]
-        T1 --> T2["Create assignment<br/>always starts as Draft · A8"]
-        T2 --> T3["Publish it<br/>now visible to that class"]
-        T3 --> T4["Read submissions for<br/>own assignments"]
-        T4 --> T5["Grade: marks 0 to MaxMarks,<br/>plus feedback<br/>Rule 5"]
-        T2 --> T6["Edit or delete own assignment<br/>class and subject immutable<br/>A12"]
-        T --> TX["Outside own scope, or another<br/>teacher's work: 404<br/>Rule 4 · A13"]
-    end
-
-    subgraph STU["Student — scoped to enrolled classes"]
-        direction TB
-        S --> S1["List assignments: Published only,<br/>enrolled classes only<br/>Rule 3 and Rule 6"]
-        S1 --> S2["Submit one text answer<br/>A3 · A4"]
-        S2 --> S3["Edit it until the deadline<br/>and until it is graded<br/>Rule 2"]
-        S3 --> S4["Read marks and feedback<br/>answer now permanently locked<br/>A1"]
-        S2 --> S5["Past the deadline: refused unless<br/>AllowLateSubmission<br/>Rule 1"]
-        S --> SX["A Draft, another class, or another<br/>student's work: 404, never 403 · A7"]
-    end
+    A(["Student signs in"]) --> B["See published assignments"]
+    B --> C{"Enrolled in that class?"}
+    C -->|no| D["404 - not visible"]
+    C -->|yes| E["Open the assignment"]
+    E --> F{"Deadline passed?"}
+    F -->|no| G["Submit a text answer"]
+    F -->|yes| H{"Late allowed?"}
+    H -->|no| I["Submission refused"]
+    H -->|yes| J["Submitted, marked Late"]
+    G --> K["Edit until the deadline"]
+    J --> L["Read-only immediately"]
+    K --> M["Teacher grades it"]
+    L --> M
+    M --> N["Read marks and feedback"]
+    N --> O["Answer locked for good"]
 ```
 
-A consequence worth spelling out, because it is easy to get backwards:
-**`AllowLateSubmission` permits a late *delivery*, not an open editing window.** Rule 1 lets the late
-submission in; rule 2 then locks it immediately, because rule 2 has no late-submission exception. So
-a late submission is read-only from the moment it is created.
+Drafts and other classes are invisible — **rule 6** and **rule 3**, answered with 404 rather than 403
+so the response does not confirm the assignment exists (**A7**). The two read-only paths are the
+point of the diagram: **`AllowLateSubmission` permits a late *delivery*, not an open editing window.**
+Rule 1 lets the late submission in, and rule 2 locks it immediately, because rule 2 has no
+late-submission exception.
+
+### What a teacher can do
+
+```mermaid
+flowchart TD
+    A(["Teacher signs in"]) --> B["See my teaching scope"]
+    B --> C{"Assigned to that pair?"}
+    C -->|no| D["Refused - rule 4"]
+    C -->|yes| E["Create an assignment"]
+    E --> F["Saved as Draft"]
+    F --> G["Edit or delete it"]
+    F --> H["Publish it"]
+    H --> I["That class can now see it"]
+    I --> J["See its submissions"]
+    J --> K{"Marks within MaxMarks?"}
+    K -->|no| L["Rejected - rule 5"]
+    K -->|yes| M["Save marks and feedback"]
+    M --> N["Student's answer locks"]
+```
+
+"Teaching scope" is the set of class + subject pairs an admin assigned to that teacher, read from
+`GET /assignments/teaching-scope`. Acting outside it is refused, and another teacher's assignment
+returns 404 in both the list and the single-item view (**A13**). Class and subject are fixed once
+created (**A12**).
+
+### What an admin can do
+
+```mermaid
+flowchart TD
+    A(["Admin signs in"]) --> B["Create and edit users"]
+    B --> C{"Has academic records?"}
+    C -->|yes| D["Delete refused, 409"]
+    C -->|no| E["Delete allowed"]
+    A --> F["Create classes and subjects"]
+    F --> G["Assign teachers to subjects"]
+    G --> H["Enrol students in classes"]
+    A --> I["Read all data, unscoped"]
+    I --> J["Cannot create or grade"]
+```
+
+The admin builds the structure everyone else operates inside — without a teacher assignment no
+teacher can author anything, and without an enrolment no student sees anything. But an admin holds no
+teaching scope of their own, so **A6** falls out of rule 4 rather than being a separate restriction.
+
+### Permission matrix
+
+| Action | Admin | Teacher | Student | Enforced by |
+|---|:--:|:--:|:--:|---|
+| Log in, refresh, log out | ✅ | ✅ | ✅ | anonymous / any role |
+| Create, update, delete users | ✅ | ❌ | ❌ | `[Authorize(Roles="Admin")]` |
+| Create classes, subjects, enrolments | ✅ | ❌ | ❌ | `[Authorize(Roles="Admin")]` |
+| Assign a teacher to class + subject | ✅ | ❌ | ❌ | `[Authorize(Roles="Admin")]` |
+| Read **every** assignment / submission | ✅ | ❌ | ❌ | admin endpoints, unscoped |
+| Read own teaching scope | ❌ | ✅ | ❌ | rule 4 |
+| Create / edit / delete an assignment | ❌ | own scope | ❌ | rule 4, A12, A13 |
+| Publish an assignment | ❌ | ✅ | ❌ | A8 |
+| See a **Draft** assignment | ✅ | own only | ❌ 404 | rule 6 |
+| List assignments | all | own only | published, enrolled classes | rules 3, 6 |
+| Submit an answer | ❌ | ❌ | ✅ | rule 1, A3, A4 |
+| Edit own answer | ❌ | ❌ | before deadline, before grading | rule 2 |
+| Read someone else's submission | ✅ | own assignments | ❌ 404 | rule 3, A7 |
+| Award marks and feedback | ❌ | own assignments | ❌ | rules 4, 5 |
+| Un-grade a submission | ❌ | ❌ | ❌ | rule 8 |
 
 ### The happy path, end to end
 
@@ -263,102 +308,143 @@ Assignment-Submission-System/
 ## Database Schema
 
 Eight tables. Table names are snake_case, column names PascalCase (EF Core's default). Every primary
-key is a `uuid`; both enums are stored as **strings**, not integers, so the raw table is readable and
-adding an enum member later cannot renumber existing rows.
+key is a `uuid`.
+
+The three `enum` columns are stored as **strings**, not integers, so the raw table is readable and
+adding a member later cannot renumber existing rows:
+
+- `users.Role` — `Admin`, `Teacher`, `Student`
+- `assignments.Status` — `Draft`, `Published`
+- `submissions.Status` — `NotSubmitted`, `Submitted`, `Late`, `Graded`
+
+Shown as two diagrams rather than one wide one: the first is the structure that decides *who may
+touch what*, the second is the coursework built on top of it.
+
+### 1. Identity and scoping
+
+`teacher_assignments` and `student_enrollments` are the two join tables the whole authorization model
+rests on. Rule 4 is a lookup in the first; rule 3 is a lookup in the second.
 
 ```mermaid
 erDiagram
     users ||--o{ teacher_assignments : "teaches via"
     users ||--o{ student_enrollments : "enrolled via"
-    users ||--o{ assignments : "authors"
-    users ||--o{ submissions : "submits"
     users ||--o{ refresh_tokens : "holds"
 
     classes ||--o{ subjects : "contains"
     classes ||--o{ teacher_assignments : "staffed by"
     classes ||--o{ student_enrollments : "has roster"
-    classes ||--o{ assignments : "scopes"
 
     subjects ||--o{ teacher_assignments : "taught in"
-    subjects ||--o{ assignments : "categorises"
-
-    assignments ||--o{ submissions : "receives"
 
     users {
         uuid Id PK
-        varchar_200 FullName
-        varchar_256 Email UK "unique"
-        varchar_512 PasswordHash "BCrypt, work factor 12"
-        varchar_20 Role "Admin, Teacher or Student"
+        string FullName
+        string Email UK
+        string PasswordHash
+        string Role
         timestamptz CreatedAt
     }
 
     classes {
         uuid Id PK
-        varchar_100 Name
-        varchar_20 Code UK "unique"
+        string Name
+        string Code UK
         timestamptz CreatedAt
     }
 
     subjects {
         uuid Id PK
-        varchar_100 Name
-        uuid ClassId FK "cascade"
+        string Name
+        uuid ClassId FK
     }
 
     teacher_assignments {
         uuid Id PK
-        uuid TeacherId FK "cascade"
-        uuid SubjectId FK "cascade"
-        uuid ClassId FK "cascade"
+        uuid TeacherId FK
+        uuid SubjectId FK
+        uuid ClassId FK
         timestamptz AssignedAt
     }
 
     student_enrollments {
         uuid Id PK
-        uuid StudentId FK "cascade"
-        uuid ClassId FK "cascade"
+        uuid StudentId FK
+        uuid ClassId FK
         timestamptz EnrolledAt
     }
 
+    refresh_tokens {
+        uuid Id PK
+        string Token UK
+        uuid UserId FK
+        timestamptz ExpiresAt
+        boolean IsRevoked
+        timestamptz CreatedAt
+    }
+```
+
+### 2. Coursework
+
+`users`, `classes` and `subjects` appear here as plain boxes — their columns are in the diagram
+above. An assignment carries `ClassId` **and** `SubjectId` because rule 4 authorizes on the *pair*,
+not on either alone.
+
+```mermaid
+erDiagram
+    classes ||--o{ assignments : "scopes"
+    subjects ||--o{ assignments : "categorises"
+    users ||--o{ assignments : "authors"
+    assignments ||--o{ submissions : "receives"
+    users ||--o{ submissions : "submits"
+
     assignments {
         uuid Id PK
-        varchar_200 Title
-        varchar_5000 Description
+        string Title
+        string Description
         timestamptz Deadline
         int MaxMarks
-        varchar_20 Status "Draft or Published"
+        string Status
         boolean AllowLateSubmission
-        uuid ClassId FK "cascade"
-        uuid SubjectId FK "cascade"
-        uuid CreatedByTeacherId FK "restrict"
+        uuid ClassId FK
+        uuid SubjectId FK
+        uuid CreatedByTeacherId FK
         timestamptz CreatedAt
         timestamptz UpdatedAt
     }
 
     submissions {
         uuid Id PK
-        varchar_5000 AnswerText
-        varchar_20 Status "NotSubmitted, Submitted, Late or Graded"
-        int Marks "nullable until graded"
-        varchar_2000 Feedback "nullable until graded"
+        string AnswerText
+        string Status
+        int Marks
+        string Feedback
         boolean IsLate
-        uuid AssignmentId FK "cascade"
-        uuid StudentId FK "restrict"
+        uuid AssignmentId FK
+        uuid StudentId FK
         timestamptz SubmittedAt
-        timestamptz UpdatedAt "nullable"
-        timestamptz GradedAt "nullable"
-    }
-
-    refresh_tokens {
-        uuid Id PK
-        varchar_200 Token UK "unique"
-        uuid UserId FK "cascade"
-        timestamptz ExpiresAt
-        boolean IsRevoked
-        timestamptz CreatedAt
+        timestamptz UpdatedAt
+        timestamptz GradedAt
     }
 ```
+
+### Column limits
+
+`string` above is `varchar` at these lengths, all enforced by the database as well as by
+FluentValidation:
+
+| Column | Limit | | Column | Limit |
+|---|---|---|---|---|
+| `users.FullName` | 200 | | `assignments.Title` | 200 |
+| `users.Email` | 256 | | `assignments.Description` | 5000 |
+| `users.PasswordHash` | 512 | | `submissions.AnswerText` | 5000 |
+| `classes.Name` | 100 | | `submissions.Feedback` | 2000 |
+| `classes.Code` | 20 | | `refresh_tokens.Token` | 200 |
+| `subjects.Name` | 100 | | all enum columns | 20 |
+
+`submissions.Marks`, `submissions.Feedback`, `submissions.UpdatedAt` and `submissions.GradedAt` are
+the only nullable columns — null is the meaningful "not graded yet" and "never edited" state, rather
+than a sentinel value.
 
 ### Constraints that carry business meaning
 
