@@ -18,17 +18,10 @@ Then open **http://localhost:3000** and sign in with any account from
 
 ## Overview
 
-Three roles, each with a genuinely different view of the same data:
-
-| Role | Can do |
-|---|---|
-| **Admin** | Manage users, classes, subjects, teacher assignments and student enrolments; view every assignment and submission in the system |
-| **Teacher** | Create, edit, publish and delete assignments **for the class + subject pairs they are assigned to**; see submissions for their own assignments; award marks and feedback |
-| **Student** | See **published** assignments for the classes they are enrolled in; submit one text answer per assignment; edit it until the deadline or until it is graded; read their marks and feedback |
-
-The interesting part of the project is not the CRUD — it is that **every rule is enforced in the
-backend service layer**, and the frontend is treated as untrusted. Hiding a button is presentation;
-returning `403` (or `404`, see [A7](#assumptions)) is security. Both are done, independently.
+Three roles, each with a genuinely different view of the same data. The interesting part of the
+project is not the CRUD — it is that **every rule is enforced in the backend service layer**, and the
+frontend is treated as untrusted. Hiding a button is presentation; returning `403` (or `404`, see
+[A7](#assumptions)) is security. Both are done, independently.
 
 ### Main features
 
@@ -49,6 +42,92 @@ returning `403` (or `404`, see [A7](#assumptions)) is security. Both are done, i
   browser.
 - **78 unit tests** covering all 8 business rules and the role guards.
 - **One-command Docker setup** and **GitHub Actions CI** on every push.
+
+---
+
+## Roles and Permissions
+
+| Role | Can do |
+|---|---|
+| **Admin** | Manage users, classes, subjects, teacher assignments and student enrolments; view every assignment and submission in the system |
+| **Teacher** | Create, edit, publish and delete assignments **for the class + subject pairs they are assigned to**; see submissions for their own assignments; award marks and feedback |
+| **Student** | See **published** assignments for the classes they are enrolled in; submit one text answer per assignment; edit it until the deadline or until it is graded; read their marks and feedback |
+
+### Who can do what
+
+Rule and assumption references point at [Business Rules](#business-rules) and
+[Assumptions](#assumptions). Every branch below is enforced server-side.
+
+```mermaid
+flowchart TD
+    L["POST /auth/login<br/>email + password"] --> JWT{{"JWT access token<br/>carries a role claim"}}
+
+    JWT -->|role = Admin| A["ADMIN"]
+    JWT -->|role = Teacher| T["TEACHER"]
+    JWT -->|role = Student| S["STUDENT"]
+
+    subgraph ADM["Admin — sets the system up, never teaches"]
+        direction TB
+        A --> A1["Users: create, update,<br/>delete, in any role"]
+        A1 --> A9["Delete refused with 409 if the<br/>user has academic records · A9"]
+        A --> A2["Classes and subjects<br/>Teacher assignments<br/>Student enrolments"]
+        A2 --> A5["Read every assignment and<br/>submission, unscoped<br/>Cannot create or grade · A6"]
+    end
+
+    subgraph TCH["Teacher — scoped to assigned class + subject pairs"]
+        direction TB
+        T --> T1["Read own class + subject pairs<br/>GET /assignments/teaching-scope"]
+        T1 --> T2["Create assignment<br/>always starts as Draft · A8"]
+        T2 --> T3["Publish it<br/>now visible to that class"]
+        T3 --> T4["Read submissions for<br/>own assignments"]
+        T4 --> T5["Grade: marks 0 to MaxMarks,<br/>plus feedback<br/>Rule 5"]
+        T2 --> T6["Edit or delete own assignment<br/>class and subject immutable<br/>A12"]
+        T --> TX["Outside own scope, or another<br/>teacher's work: 404<br/>Rule 4 · A13"]
+    end
+
+    subgraph STU["Student — scoped to enrolled classes"]
+        direction TB
+        S --> S1["List assignments: Published only,<br/>enrolled classes only<br/>Rule 3 and Rule 6"]
+        S1 --> S2["Submit one text answer<br/>A3 · A4"]
+        S2 --> S3["Edit it until the deadline<br/>and until it is graded<br/>Rule 2"]
+        S3 --> S4["Read marks and feedback<br/>answer now permanently locked<br/>A1"]
+        S2 --> S5["Past the deadline: refused unless<br/>AllowLateSubmission<br/>Rule 1"]
+        S --> SX["A Draft, another class, or another<br/>student's work: 404, never 403 · A7"]
+    end
+```
+
+A consequence worth spelling out, because it is easy to get backwards:
+**`AllowLateSubmission` permits a late *delivery*, not an open editing window.** Rule 1 lets the late
+submission in; rule 2 then locks it immediately, because rule 2 has no late-submission exception. So
+a late submission is read-only from the moment it is created.
+
+### The happy path, end to end
+
+```mermaid
+sequenceDiagram
+    actor T as Teacher
+    participant API as API
+    actor S as Student
+
+    T->>API: POST /assignments
+    Note right of API: Created as Draft — invisible to students
+    T->>API: PATCH /assignments/ID/publish
+    Note right of API: Draft to Published
+
+    S->>API: GET /assignments
+    Note right of API: Published only, enrolled classes only
+    S->>API: POST /assignments/ID/submissions
+    Note right of API: Deadline checked — status becomes Submitted or Late
+    S->>API: PUT /assignments/ID/submissions/mine
+    Note right of API: Allowed only before deadline and before grading
+
+    T->>API: GET /assignments/ID/submissions
+    T->>API: PATCH /assignments/ID/submissions/SID/grade
+    Note right of API: Marks validated against this assignment's MaxMarks
+
+    S->>API: GET /assignments/ID/submissions/mine
+    Note right of API: Marks and feedback returned — answer now locked
+```
 
 ---
 
@@ -178,6 +257,133 @@ Assignment-Submission-System/
         ├── lib/                    # api client, auth, schemas, assignments, dashboard, utils
         └── types/                  # api.ts — response shapes
 ```
+
+---
+
+## Database Schema
+
+Eight tables. Table names are snake_case, column names PascalCase (EF Core's default). Every primary
+key is a `uuid`; both enums are stored as **strings**, not integers, so the raw table is readable and
+adding an enum member later cannot renumber existing rows.
+
+```mermaid
+erDiagram
+    users ||--o{ teacher_assignments : "teaches via"
+    users ||--o{ student_enrollments : "enrolled via"
+    users ||--o{ assignments : "authors"
+    users ||--o{ submissions : "submits"
+    users ||--o{ refresh_tokens : "holds"
+
+    classes ||--o{ subjects : "contains"
+    classes ||--o{ teacher_assignments : "staffed by"
+    classes ||--o{ student_enrollments : "has roster"
+    classes ||--o{ assignments : "scopes"
+
+    subjects ||--o{ teacher_assignments : "taught in"
+    subjects ||--o{ assignments : "categorises"
+
+    assignments ||--o{ submissions : "receives"
+
+    users {
+        uuid Id PK
+        varchar_200 FullName
+        varchar_256 Email UK "unique"
+        varchar_512 PasswordHash "BCrypt, work factor 12"
+        varchar_20 Role "Admin, Teacher or Student"
+        timestamptz CreatedAt
+    }
+
+    classes {
+        uuid Id PK
+        varchar_100 Name
+        varchar_20 Code UK "unique"
+        timestamptz CreatedAt
+    }
+
+    subjects {
+        uuid Id PK
+        varchar_100 Name
+        uuid ClassId FK "cascade"
+    }
+
+    teacher_assignments {
+        uuid Id PK
+        uuid TeacherId FK "cascade"
+        uuid SubjectId FK "cascade"
+        uuid ClassId FK "cascade"
+        timestamptz AssignedAt
+    }
+
+    student_enrollments {
+        uuid Id PK
+        uuid StudentId FK "cascade"
+        uuid ClassId FK "cascade"
+        timestamptz EnrolledAt
+    }
+
+    assignments {
+        uuid Id PK
+        varchar_200 Title
+        varchar_5000 Description
+        timestamptz Deadline
+        int MaxMarks
+        varchar_20 Status "Draft or Published"
+        boolean AllowLateSubmission
+        uuid ClassId FK "cascade"
+        uuid SubjectId FK "cascade"
+        uuid CreatedByTeacherId FK "restrict"
+        timestamptz CreatedAt
+        timestamptz UpdatedAt
+    }
+
+    submissions {
+        uuid Id PK
+        varchar_5000 AnswerText
+        varchar_20 Status "NotSubmitted, Submitted, Late or Graded"
+        int Marks "nullable until graded"
+        varchar_2000 Feedback "nullable until graded"
+        boolean IsLate
+        uuid AssignmentId FK "cascade"
+        uuid StudentId FK "restrict"
+        timestamptz SubmittedAt
+        timestamptz UpdatedAt "nullable"
+        timestamptz GradedAt "nullable"
+    }
+
+    refresh_tokens {
+        uuid Id PK
+        varchar_200 Token UK "unique"
+        uuid UserId FK "cascade"
+        timestamptz ExpiresAt
+        boolean IsRevoked
+        timestamptz CreatedAt
+    }
+```
+
+### Constraints that carry business meaning
+
+These are not incidental — each one enforces a rule or an assumption at the database level, so it
+holds even if a service method is bypassed.
+
+| Constraint | Table | Enforces |
+|---|---|---|
+| `UNIQUE (AssignmentId, StudentId)` | `submissions` | **A4** — one submission per student per assignment. Two rows would make "their submission" ambiguous and grading non-deterministic. |
+| `UNIQUE (StudentId, ClassId)` | `student_enrollments` | A student cannot be enrolled in the same class twice, which would duplicate every assignment in their list. |
+| `UNIQUE (TeacherId, SubjectId, ClassId)` | `teacher_assignments` | The teaching-scope row that **rule 4** checks is unique, so scope questions have one answer. |
+| `UNIQUE (ClassId, Name)` | `subjects` | No two subjects with the same name inside one class. |
+| `UNIQUE (Email)` | `users` | Login identity. |
+| `UNIQUE (Token)` | `refresh_tokens` | Refresh tokens are single-use and rotated. |
+| **`RESTRICT`** on `assignments.CreatedByTeacherId` | | **A9** — deleting a teacher who authored assignments is refused, not cascaded. |
+| **`RESTRICT`** on `submissions.StudentId` | | **A9** — deleting a student who submitted work would erase marks, so it is refused. |
+| `CASCADE` on everything under `classes` | | Deleting a class *is* meant to remove its subjects, assignments and submissions together. |
+
+### Indexes
+
+| Index | Purpose |
+|---|---|
+| `(ClassId, Status)` on `assignments` | The student list query — filter by enrolled class **and** `Published` — is the hottest path in the app. |
+| `(Deadline)` on `assignments` | Ordering and overdue checks. |
+| `(UserId)` on `refresh_tokens` | Revoking every token for one user at logout. |
 
 ---
 
