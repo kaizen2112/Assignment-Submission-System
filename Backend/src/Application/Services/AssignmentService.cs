@@ -2,6 +2,7 @@ using AssignmentSystem.Application.Common;
 using AssignmentSystem.Application.DTOs.Assignment;
 using AssignmentSystem.Application.DTOs.Common;
 using AssignmentSystem.Application.Interfaces;
+using AssignmentSystem.Domain.Entities;
 using AssignmentSystem.Domain.Enums;
 using AssignmentEntity = AssignmentSystem.Domain.Entities.Assignment;
 
@@ -232,6 +233,42 @@ public sealed class AssignmentService : IAssignmentService
         return Result.Success();
     }
 
+    public async Task<Result<PagedResult<TeachingScopeResponse>>> GetTeachingScopeAsync(
+        PagedQueryParameters query,
+        CancellationToken cancellationToken = default)
+    {
+        if (ResolveCaller() is not { } caller)
+        {
+            return Result<PagedResult<TeachingScopeResponse>>.Failure(
+                "Not authenticated.", ErrorType.Unauthorized);
+        }
+
+        // Teacher-only, and enforced here as well as by [Authorize(Roles = "Teacher")] on the action.
+        // "Which classes do I teach?" is meaningless for the other two roles: an Admin manages teaching
+        // assignments through /admin/teacher-assignments, and a Student has enrollments, not teaching.
+        if (caller.Role != Role.Teacher)
+        {
+            return Result<PagedResult<TeachingScopeResponse>>.Failure(
+                "Only teachers have a teaching scope.", ErrorType.Forbidden);
+        }
+
+        var pagination = query.ToPagination();
+
+        var paginationCheck = pagination.Validate();
+        if (!paginationCheck.IsSuccess)
+        {
+            return Result<PagedResult<TeachingScopeResponse>>.Failure(
+                paginationCheck.Error!, paginationCheck.ErrorType);
+        }
+
+        // caller.UserId, never a parameter: this is the one query whose whole job is to say what the
+        // *caller* may touch, so accepting a teacherId from outside would defeat it.
+        var page = await _classes.GetTeachingScopePagedAsync(
+            caller.UserId, pagination, cancellationToken);
+
+        return Result<PagedResult<TeachingScopeResponse>>.Success(page.Map(ToTeachingScope));
+    }
+
     // Update, publish and delete share one gate, so the three cannot drift apart on who is allowed
     // to do what. Ownership is checked before rule 4: docs/04 scopes these to "own only", and the
     // rule-4 re-check then catches a teacher whose assignment to the class was since revoked.
@@ -319,4 +356,7 @@ public sealed class AssignmentService : IAssignmentService
             a.SubjectId,
             a.Subject.Name,
             a.CreatedAt);
+
+    private static TeachingScopeResponse ToTeachingScope(TeacherAssignment ta) =>
+        new(ta.ClassId, ta.Class.Name, ta.Class.Code, ta.SubjectId, ta.Subject.Name);
 }

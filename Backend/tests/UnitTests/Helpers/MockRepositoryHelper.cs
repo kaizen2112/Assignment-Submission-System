@@ -172,6 +172,24 @@ internal static class MockRepositoryHelper
         return mock;
     }
 
+    // Set up so the *only* teacherId that returns rows is the one passed here. A setup matching
+    // It.IsAny<Guid>() would return the same scope for every teacher and quietly pass a service that
+    // ignored the caller's identity — which is the one thing this query must get right.
+    internal static Mock<IClassRepository> WithTeachingScope(
+        this Mock<IClassRepository> mock,
+        Guid teacherId,
+        params TeacherAssignment[] teachingAssignments)
+    {
+        var page = new PagedResult<TeacherAssignment>(
+            teachingAssignments, 1, PaginationQuery.DefaultPageSize, teachingAssignments.Length);
+
+        mock.Setup(r => r.GetTeachingScopePagedAsync(
+                teacherId, It.IsAny<PaginationQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(page);
+
+        return mock;
+    }
+
     // --- Users ----------------------------------------------------------------------------------
 
     internal static Mock<IUserRepository> UsersWith(params User[] users)

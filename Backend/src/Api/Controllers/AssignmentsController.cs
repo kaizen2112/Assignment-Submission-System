@@ -37,6 +37,24 @@ public sealed class AssignmentsController : ControllerBase
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult();
     }
 
+    // Added in Phase 5: a teacher had no way to discover their own ClassId/SubjectId, so the
+    // create-assignment form had nothing to populate its pickers with and a teacher holding no
+    // assignments yet could never create a first one. Route is safe next to GET "{id:guid}" — the guid
+    // constraint means "teaching-scope" can never bind as an id.
+    [HttpGet("teaching-scope")]
+    [Authorize(Roles = Teacher)]
+    [ProducesResponseType(typeof(PagedResult<TeachingScopeResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetTeachingScope(
+        [FromQuery] PagedQueryParameters query,
+        CancellationToken ct)
+    {
+        var result = await _assignments.GetTeachingScopeAsync(query, ct);
+
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult();
+    }
+
     [HttpGet("{id:guid}")]
     [Authorize(Roles = $"{Teacher},{Student}")]
     [ProducesResponseType(typeof(AssignmentResponse), StatusCodes.Status200OK)]

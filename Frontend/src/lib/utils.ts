@@ -76,3 +76,28 @@ export function submissionStatusTone(status: SubmissionStatus): BadgeTone {
 export function formatMarks(marks: number | null, maxMarks: number): string {
   return marks === null ? "—" : `${marks} / ${maxMarks}`;
 }
+
+// --- <input type="datetime-local"> conversion ----------------------------------------------------
+//
+// The input's value has no timezone: it is always "YYYY-MM-DDTHH:mm" in the user's local time. The API
+// stores UTC and documents a bare timestamp as UTC. So passing the input's value straight through would
+// shift every deadline by the user's offset — six hours, here — while looking correct on screen.
+// Converting in both directions is the only way the number a teacher typed is the number a student sees.
+
+// Local input value -> UTC ISO string for the API. `new Date("2026-08-20T23:59")` is parsed as *local*
+// time by definition, so toISOString() does the offset arithmetic.
+export function dateTimeLocalToUtcIso(value: string): string {
+  return new Date(value).toISOString();
+}
+
+// UTC ISO from the API -> local input value. Built from the local getters rather than by slicing
+// toISOString(), which would show UTC and silently move the displayed time.
+export function utcIsoToDateTimeLocal(iso: string): string {
+  const date = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  );
+}

@@ -18,7 +18,10 @@ interface NavItem {
 // or not a link to it was ever drawn.
 const NAV: Record<Role, NavItem[]> = {
   Admin: [{ href: "/admin/dashboard", label: "Dashboard" }],
-  Teacher: [{ href: "/teacher/dashboard", label: "Dashboard" }],
+  Teacher: [
+    { href: "/teacher/dashboard", label: "Dashboard" },
+    { href: "/teacher/assignments", label: "Assignments" },
+  ],
   Student: [{ href: "/student/dashboard", label: "Dashboard" }],
 };
 

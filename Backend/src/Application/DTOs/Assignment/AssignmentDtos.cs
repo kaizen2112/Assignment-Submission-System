@@ -61,6 +61,17 @@ public sealed record AssignmentListItemResponse(
     string SubjectName,
     DateTime CreatedAt);
 
+// What a teacher is allowed to create an assignment for: one row per class+subject pair they hold.
+// Flat rather than nested (a class with its subjects inside) because the create form needs to pick a
+// *pair* — a teacher may hold Mathematics in 10A without holding Physics in 10A, so offering the
+// class's full subject list would offer combinations rule 4 then rejects with a 403.
+public sealed record TeachingScopeResponse(
+    Guid ClassId,
+    string ClassName,
+    string ClassCode,
+    Guid SubjectId,
+    string SubjectName);
+
 internal static class DateTimeNormalization
 {
     // Npgsql refuses to write a DateTime whose Kind is Unspecified to a timestamptz column, and

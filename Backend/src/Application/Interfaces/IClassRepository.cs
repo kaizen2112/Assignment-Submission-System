@@ -42,6 +42,16 @@ public interface IClassRepository
         Guid subjectId,
         CancellationToken cancellationToken = default);
 
+    // The listing counterpart to TeacherAssignmentExistsAsync above. That one answers "may this teacher
+    // touch this class+subject?"; this one answers "which pairs may they touch at all?" — which a
+    // teacher had no way to discover before, leaving the create-assignment form with nothing to put in
+    // its pickers and a brand-new teacher unable to create anything. Includes Class and Subject, since
+    // every caller needs the names rather than bare ids.
+    Task<PagedResult<TeacherAssignment>> GetTeachingScopePagedAsync(
+        Guid teacherId,
+        PaginationQuery pagination,
+        CancellationToken cancellationToken = default);
+
     Task AddTeacherAssignmentAsync(
         TeacherAssignment teacherAssignment,
         CancellationToken cancellationToken = default);

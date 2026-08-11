@@ -115,6 +115,28 @@ internal static class EntityBuilders
         return submission;
     }
 
+    // A teacher's claim on one class+subject pair. Class and Subject are always wired, because
+    // AssignmentService.ToTeachingScope reads ta.Class.Name/.Code and ta.Subject.Name — leaving them
+    // null throws a NullReferenceException that looks like a product bug but is a test-setup bug.
+    internal static TeacherAssignment TeacherAssignment(
+        Guid teacherId,
+        Class? @class = null,
+        Subject? subject = null)
+    {
+        var resolvedClass = @class ?? Class();
+        var resolvedSubject = subject ?? Subject(resolvedClass.Id);
+
+        var teacherAssignment = Domain.Entities.TeacherAssignment.Create(
+            teacherId,
+            resolvedSubject.Id,
+            resolvedClass.Id);
+
+        teacherAssignment.Class = resolvedClass;
+        teacherAssignment.Subject = resolvedSubject;
+
+        return teacherAssignment;
+    }
+
     // The one graph the service tests need most: an assignment plus the teacher who owns it, the
     // student enrolled in its class, and that student's submission — all ids already agreeing.
     internal static Scenario BuildScenario(

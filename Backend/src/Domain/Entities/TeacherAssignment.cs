@@ -17,10 +17,13 @@ public sealed class TeacherAssignment
     public User Teacher { get; private set; } = null!;
 
     public Guid SubjectId { get; private set; }
-    public Subject Subject { get; private set; } = null!;
+    // internal set, like the four navigations on Assignment and Submission: EF fills these, no factory
+    // does, and the teaching-scope response reads the names through them — so a unit test needs to be
+    // able to arrange them. See Domain/AssemblyInfo.cs for why internal rather than public.
+    public Subject Subject { get; internal set; } = null!;
 
     public Guid ClassId { get; private set; }
-    public Class Class { get; private set; } = null!;
+    public Class Class { get; internal set; } = null!;
 
     public DateTime AssignedAt { get; private set; }
 

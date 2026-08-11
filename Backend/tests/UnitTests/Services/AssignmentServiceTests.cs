@@ -613,4 +613,167 @@ public sealed class AssignmentServiceTests
         result.ErrorType.Should().Be(ErrorType.Validation);
         result.Error.Should().Contain(PaginationQuery.MaxPageSize.ToString());
     }
+
+    // =============================================================================================
+    // TEACHING SCOPE — the read side of rule 4 (added in Phase 5)
+    //
+    // This exists because a teacher previously had no way to discover their own ClassId/SubjectId, so
+    // the create-assignment form could not populate its pickers. The rule it must not break: a teacher
+    // sees only their *own* pairs, and only a teacher sees any.
+    // =============================================================================================
+
+    [Fact]
+    public async Task GetTeachingScopeAsync_Teacher_ReturnsOwnClassSubjectPairsWithNames()
+    {
+        // Arrange
+        var teacher = EntityBuilders.Teacher();
+        var @class = EntityBuilders.Class("Class 9 - B", "9B");
+        var subject = EntityBuilders.Subject(@class.Id, "Physics");
+
+        var mocks = new MockRepositoryHelper.ServiceMocks
+        {
+            CurrentUser = MockRepositoryHelper.CurrentUser(teacher.Id, Role.Teacher)
+        };
+        mocks.Classes.WithTeachingScope(
+            teacher.Id, EntityBuilders.TeacherAssignment(teacher.Id, @class, subject));
+
+        // Act
+        var result = await Build(mocks).GetTeachingScopeAsync(
+            new PagedQueryParameters(), CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Items.Should().HaveCount(1);
+
+        var scope = result.Value.Items[0];
+        scope.ClassId.Should().Be(@class.Id);
+        scope.SubjectId.Should().Be(subject.Id);
+        // The names are the whole point — a picker cannot show a GUID.
+        scope.ClassName.Should().Be("Class 9 - B");
+        scope.ClassCode.Should().Be("9B");
+        scope.SubjectName.Should().Be("Physics");
+    }
+
+    [Fact]
+    public async Task GetTeachingScopeAsync_QueriesWithCallersOwnId_NotAnyOtherTeachers()
+    {
+        // Arrange — the mock only answers for `teacher.Id`, so if the service passed anything else the
+        // result would come back empty. That is the assertion: identity comes from the token.
+        var teacher = EntityBuilders.Teacher();
+        var otherTeacher = EntityBuilders.Teacher("Other", "other@test.com");
+
+        var mocks = new MockRepositoryHelper.ServiceMocks
+        {
+            CurrentUser = MockRepositoryHelper.CurrentUser(teacher.Id, Role.Teacher)
+        };
+        mocks.Classes.WithTeachingScope(teacher.Id, EntityBuilders.TeacherAssignment(teacher.Id));
+
+        // Act
+        var result = await Build(mocks).GetTeachingScopeAsync(
+            new PagedQueryParameters(), CancellationToken.None);
+
+        // Assert
+        result.Value.Items.Should().HaveCount(1);
+
+        mocks.Classes.Verify(
+            r => r.GetTeachingScopePagedAsync(
+                teacher.Id, It.IsAny<PaginationQuery>(), It.IsAny<CancellationToken>()),
+            Times.Once());
+
+        mocks.Classes.Verify(
+            r => r.GetTeachingScopePagedAsync(
+                otherTeacher.Id, It.IsAny<PaginationQuery>(), It.IsAny<CancellationToken>()),
+            Times.Never());
+    }
+
+    [Theory]
+    [InlineData(Role.Student)]
+    [InlineData(Role.Admin)]
+    public async Task GetTeachingScopeAsync_NonTeacher_ReturnsForbiddenAndNeverQueries(Role role)
+    {
+        // Arrange
+        var user = EntityBuilders.Student();
+
+        var mocks = new MockRepositoryHelper.ServiceMocks
+        {
+            CurrentUser = MockRepositoryHelper.CurrentUser(user.Id, role)
+        };
+
+        // Act
+        var result = await Build(mocks).GetTeachingScopeAsync(
+            new PagedQueryParameters(), CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorType.Should().Be(ErrorType.Forbidden);
+
+        // Rejected before touching the repository — an Admin must not be able to read a teacher's scope
+        // by way of a query that ran and was then discarded.
+        mocks.Classes.Verify(
+            r => r.GetTeachingScopePagedAsync(
+                It.IsAny<Guid>(), It.IsAny<PaginationQuery>(), It.IsAny<CancellationToken>()),
+            Times.Never());
+    }
+
+    [Fact]
+    public async Task GetTeachingScopeAsync_AnonymousCaller_ReturnsUnauthorized()
+    {
+        // Arrange
+        var mocks = new MockRepositoryHelper.ServiceMocks
+        {
+            CurrentUser = MockRepositoryHelper.AnonymousUser()
+        };
+
+        // Act
+        var result = await Build(mocks).GetTeachingScopeAsync(
+            new PagedQueryParameters(), CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorType.Should().Be(ErrorType.Unauthorized);
+    }
+
+    [Fact]
+    public async Task GetTeachingScopeAsync_PageSizeAboveMaximum_ReturnsValidationFailure()
+    {
+        // Arrange — the same reject-not-clamp contract as every other list endpoint.
+        var teacher = EntityBuilders.Teacher();
+
+        var mocks = new MockRepositoryHelper.ServiceMocks
+        {
+            CurrentUser = MockRepositoryHelper.CurrentUser(teacher.Id, Role.Teacher)
+        };
+
+        // Act
+        var result = await Build(mocks).GetTeachingScopeAsync(
+            new PagedQueryParameters { PageSize = PaginationQuery.MaxPageSize + 1 },
+            CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorType.Should().Be(ErrorType.Validation);
+    }
+
+    [Fact]
+    public async Task GetTeachingScopeAsync_TeacherHoldsNothing_ReturnsEmptyPageNotFailure()
+    {
+        // Arrange — a brand-new teacher. This is the case that motivated the endpoint: they must get an
+        // empty list they can act on, not an error, so the form can say "ask an admin to assign you".
+        var teacher = EntityBuilders.Teacher();
+
+        var mocks = new MockRepositoryHelper.ServiceMocks
+        {
+            CurrentUser = MockRepositoryHelper.CurrentUser(teacher.Id, Role.Teacher)
+        };
+        mocks.Classes.WithTeachingScope(teacher.Id);
+
+        // Act
+        var result = await Build(mocks).GetTeachingScopeAsync(
+            new PagedQueryParameters(), CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Items.Should().BeEmpty();
+        result.Value.TotalCount.Should().Be(0);
+    }
 }

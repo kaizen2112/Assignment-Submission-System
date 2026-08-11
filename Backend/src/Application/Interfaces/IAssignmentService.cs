@@ -28,4 +28,11 @@ public interface IAssignmentService
     Task<Result<AssignmentResponse>> PublishAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task<Result> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+
+    // The class+subject pairs the calling teacher may create an assignment for. Lives here rather than
+    // on a class service because its only purpose is to populate CreateAssignmentRequest's ClassId and
+    // SubjectId — it is the read side of the same rule-4 gate CreateAsync enforces.
+    Task<Result<PagedResult<TeachingScopeResponse>>> GetTeachingScopeAsync(
+        PagedQueryParameters query,
+        CancellationToken cancellationToken = default);
 }

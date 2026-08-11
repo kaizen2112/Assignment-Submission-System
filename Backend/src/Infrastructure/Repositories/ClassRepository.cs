@@ -65,6 +65,23 @@ public sealed class ClassRepository : IClassRepository
             ta => ta.TeacherId == teacherId && ta.ClassId == classId && ta.SubjectId == subjectId,
             cancellationToken);
 
+    // Sorted by class then subject name, which is how a picker should read. The .ThenBy(Id) tie-break
+    // matters as much here as anywhere else paged: two subjects sharing a name across classes would
+    // otherwise have an unstable order and repeat across page boundaries.
+    public Task<PagedResult<TeacherAssignment>> GetTeachingScopePagedAsync(
+        Guid teacherId,
+        PaginationQuery pagination,
+        CancellationToken cancellationToken = default) =>
+        _context.TeacherAssignments
+            .AsNoTracking()
+            .Where(ta => ta.TeacherId == teacherId)
+            .Include(ta => ta.Class)
+            .Include(ta => ta.Subject)
+            .OrderBy(ta => ta.Class.Name)
+            .ThenBy(ta => ta.Subject.Name)
+            .ThenBy(ta => ta.Id)
+            .ToPagedResultAsync(pagination, cancellationToken);
+
     public async Task AddTeacherAssignmentAsync(
         TeacherAssignment teacherAssignment,
         CancellationToken cancellationToken = default) =>

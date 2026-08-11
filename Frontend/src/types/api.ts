@@ -72,6 +72,18 @@ export type UpdateAssignmentRequest = Omit<
   "classId" | "subjectId"
 >;
 
+// GET /assignments/teaching-scope — one row per class+subject pair the calling teacher holds. Added in
+// Phase 5 because nothing else in the API let a teacher discover their own classId/subjectId, which the
+// create form needs. Flat, not a class with nested subjects: rule 4 grants a *pair*, so a teacher may
+// hold Mathematics in 10A without holding Physics in 10A.
+export interface TeachingScope {
+  classId: string;
+  className: string;
+  classCode: string;
+  subjectId: string;
+  subjectName: string;
+}
+
 // --- Submissions (Application/DTOs/Submission/SubmissionDtos.cs) ---------------------------------
 
 export interface Submission {
