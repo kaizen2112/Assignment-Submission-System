@@ -3,15 +3,17 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { SessionProvider } from "@/components/layout/SessionContext";
+import { TopNav } from "@/components/layout/TopNav";
 import { api, ApiError } from "@/lib/api";
 import { clearSession, logout } from "@/lib/auth";
+import { cn } from "@/lib/utils";
 import type { Role, UserProfile } from "@/types/api";
 
-// The chrome every signed-in screen sits inside: sidebar, header with the current user, sign-out.
+// The chrome every signed-in screen sits inside: a full-width product bar, a dark 240px sidebar, and a
+// light content column. Dark navigation beside light content is the whole layout idea — it separates
+// "where am I" from "what am I looking at" without a single divider line.
 //
 // It loads GET /auth/me on mount, which does double duty. The obvious half is the display name — the
 // JWT carries sub/email/role but no name, so it cannot be read locally. The useful half is that this is
@@ -22,6 +24,10 @@ export function AppShell({ role, children }: { role: Role; children: ReactNode }
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [signingOut, setSigningOut] = useState(false);
+
+  // Only meaningful below lg, where the sidebar is off-canvas. At lg and up the `lg:translate-x-0`
+  // below pins it open and this value is ignored.
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     // Aborted on unmount so a slow /me cannot resolve into an unmounted component, and so navigating
@@ -56,36 +62,53 @@ export function AppShell({ role, children }: { role: Role; children: ReactNode }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-          <div className="flex items-baseline gap-2">
-            <span className="text-sm font-semibold text-slate-900">Assignment System</span>
-            <Badge tone="info">{role}</Badge>
-          </div>
+    // The SessionProvider wraps the sidebar as well as the page, because the sidebar's footer shows the
+    // signed-in user. Keeping /auth/me to a single request is the reason this context exists at all.
+    <SessionProvider value={profile}>
+      <div className="min-h-screen bg-surface">
+        <TopNav
+          role={role}
+          profile={profile}
+          onSignOut={handleSignOut}
+          signingOut={signingOut}
+          onMenuToggle={() => setMenuOpen((open) => !open)}
+          menuOpen={menuOpen}
+        />
 
-          <div className="flex items-center gap-3">
-            {/* Reserves nothing while loading: a skeleton here would shift the header once /me lands. */}
-            {profile && (
-              <span className="hidden text-sm text-slate-600 sm:inline">{profile.fullName}</span>
-            )}
-            <Button variant="secondary" size="sm" onClick={handleSignOut} loading={signingOut}>
-              Sign out
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 md:flex-row">
-        {/* Horizontal strip on small screens, a column on md+ — no drawer, no toggle state to manage. */}
-        <aside className="md:w-48 md:shrink-0">
+        {/* top-14 rather than inset-y-0: the bar spans the full width, so the sidebar starts beneath it
+            and the logo stays in the top-left corner where people look for it. */}
+        <aside
+          id="app-sidebar"
+          // Any click inside closes the drawer. On mobile that means tapping a nav link both navigates
+          // and dismisses — which is what you want, and avoids a setState-in-effect on pathname just to
+          // achieve it. Harmless at lg and up, where the drawer state does not control visibility.
+          onClick={() => setMenuOpen(false)}
+          className={cn(
+            "fixed bottom-0 left-0 top-14 z-40 w-60",
+            "transition-transform duration-200 ease-out lg:translate-x-0",
+            menuOpen ? "translate-x-0" : "-translate-x-full",
+          )}
+        >
           <Sidebar role={role} />
         </aside>
 
-        <main className="min-w-0 flex-1">
-          <SessionProvider value={profile}>{children}</SessionProvider>
+        {/* A real <button>, not a div: it is the drawer's dismiss control, so it has to be focusable and
+            respond to Enter as well as to a tap. */}
+        {menuOpen && (
+          <button
+            type="button"
+            aria-label="Close navigation"
+            onClick={() => setMenuOpen(false)}
+            className="fixed inset-x-0 bottom-0 top-14 z-30 bg-slate-900/40 lg:hidden"
+          />
+        )}
+
+        <main className="lg:pl-60">
+          {/* max-w-300 = 1200px. Generous padding is the point of the redesign, so it steps up rather
+              than staying at a single cramped value on every screen. */}
+          <div className="mx-auto max-w-300 px-4 py-8 sm:px-6 lg:px-8">{children}</div>
         </main>
       </div>
-    </div>
+    </SessionProvider>
   );
 }

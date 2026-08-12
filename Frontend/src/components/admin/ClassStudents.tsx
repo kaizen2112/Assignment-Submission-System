@@ -3,12 +3,22 @@
 import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { GraduationCap, Plus } from "lucide-react";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Pagination } from "@/components/ui/Pagination";
-import { Section } from "@/components/ui/Section";
+import { Section, SectionFooter } from "@/components/ui/Section";
 import { Select } from "@/components/ui/Select";
-import { TableSkeleton, TBody, TD, TH, THead, TR, TableWrap } from "@/components/ui/Table";
+import {
+  TableSkeleton,
+  TBody,
+  TD,
+  TDPrimary,
+  TH,
+  THead,
+  TR,
+  TableWrap,
+} from "@/components/ui/Table";
 import { useAsync } from "@/hooks/useAsync";
 import { ApiError } from "@/lib/api";
 import { enrolStudent, listAllOfRole, listClassStudents } from "@/lib/admin";
@@ -78,24 +88,25 @@ export function ClassStudents({ classId }: { classId: string }) {
   return (
     <Section
       title="Students"
+      icon={<GraduationCap />}
       description="Only enrolled students can see this class's published assignments, or submit to them."
     >
       {rosterError && <Alert className="mb-4">{rosterError}</Alert>}
       {studentsError && <Alert className="mb-4">{studentsError}</Alert>}
       {formError && <Alert className="mb-4">{formError}</Alert>}
       {success && (
-        <Alert tone="info" className="mb-4">
+        <Alert tone="success" className="mb-4">
           {success}
         </Alert>
       )}
 
       {!loading && !rosterError && roster?.items.length === 0 ? (
-        <p className="mb-4 text-sm text-slate-500">No students enrolled in this class yet.</p>
+        <p className="text-sm text-gray-500">No students enrolled in this class yet.</p>
       ) : (
-        <div className="mb-4 flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           <TableWrap>
             <THead>
-              <TR>
+              <TR hover={false}>
                 <TH>Student</TH>
                 <TH>Enrolled</TH>
               </TR>
@@ -107,8 +118,8 @@ export function ClassStudents({ classId }: { classId: string }) {
               <TBody>
                 {roster?.items.map((row) => (
                   <TR key={row.id}>
-                    <TD className="font-medium text-slate-900">{row.studentName}</TD>
-                    <TD className="whitespace-nowrap">{formatDate(row.enrolledAt)}</TD>
+                    <TDPrimary>{row.studentName}</TDPrimary>
+                    <TD className="whitespace-nowrap text-xs text-gray-500">{formatDate(row.enrolledAt)}</TD>
                   </TR>
                 ))}
               </TBody>
@@ -119,13 +130,14 @@ export function ClassStudents({ classId }: { classId: string }) {
         </div>
       )}
 
-      {hasStudents ? (
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          noValidate
-          className="flex flex-wrap items-start gap-3 border-t border-slate-100 pt-4"
-        >
-          <div className="w-72">
+      <SectionFooter>
+        {hasStudents ? (
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            noValidate
+            className="flex flex-wrap items-start gap-3"
+          >
+          <div className="w-full sm:w-72">
             <Select
               label="Enrol a student"
               required
@@ -142,15 +154,16 @@ export function ClassStudents({ classId }: { classId: string }) {
             />
           </div>
 
-          <Button type="submit" className="mt-6" loading={isSubmitting}>
-            Enrol student
-          </Button>
-        </form>
-      ) : (
-        <p className="border-t border-slate-100 pt-4 text-sm text-slate-500">
-          There are no student accounts yet. Create one under Users first.
-        </p>
-      )}
+            <Button type="submit" icon={<Plus />} className="sm:mt-7" loading={isSubmitting}>
+              Enrol student
+            </Button>
+          </form>
+        ) : (
+          <p className="text-sm text-gray-500">
+            There are no student accounts yet. Create one under Users first.
+          </p>
+        )}
+      </SectionFooter>
     </Section>
   );
 }

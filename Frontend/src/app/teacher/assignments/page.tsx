@@ -2,22 +2,33 @@
 
 import { useCallback, useState } from "react";
 import Link from "next/link";
+import { ClipboardList, Pencil, Plus, Send, Trash2, Upload } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Alert } from "@/components/ui/Alert";
-import { AssignmentStatusBadge, Badge, OverdueBadge } from "@/components/ui/Badge";
+import { AssignmentStatusBadge, Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { DeadlineLabel } from "@/components/ui/DeadlineLabel";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { IconButton, IconLink, RowActions } from "@/components/ui/IconButton";
 import { Pagination } from "@/components/ui/Pagination";
 import { Select } from "@/components/ui/Select";
-import { TableSkeleton, TBody, TD, TH, THead, TR, TableWrap } from "@/components/ui/Table";
+import {
+  TableSkeleton,
+  TBody,
+  TD,
+  TDPrimary,
+  TH,
+  THead,
+  TR,
+  TableWrap,
+} from "@/components/ui/Table";
 import { useAsync } from "@/hooks/useAsync";
 import { ApiError } from "@/lib/api";
 import { deleteAssignment, listAssignments, publishAssignment } from "@/lib/assignments";
-import { formatDateTime } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZE } from "@/types/api";
 import type { AssignmentStatus } from "@/types/api";
 
-const COLUMNS = 6;
+const COLUMNS = 5;
 
 export default function TeacherAssignmentsPage() {
   const [page, setPage] = useState(1);
@@ -76,14 +87,15 @@ export default function TeacherAssignmentsPage() {
       <PageHeader
         title="Assignments"
         subtitle="Everything you have created, across every class you teach."
+        crumbs={[{ label: "Teacher" }, { label: "Assignments" }]}
         action={
           <Link href="/teacher/assignments/new">
-            <Button>New assignment</Button>
+            <Button icon={<Plus />}>New assignment</Button>
           </Link>
         }
       />
 
-      <div className="mb-4 max-w-56">
+      <div className="mb-5 max-w-56">
         <Select
           label="Filter by status"
           value={status}
@@ -100,12 +112,13 @@ export default function TeacherAssignmentsPage() {
         />
       </div>
 
-      {error && <Alert className="mb-4">{error}</Alert>}
-      {actionError && <Alert className="mb-4">{actionError}</Alert>}
+      {error && <Alert className="mb-6">{error}</Alert>}
+      {actionError && <Alert className="mb-6">{actionError}</Alert>}
 
       {/* An empty result is a 200, not an error — so it gets its own state, not the error banner. */}
       {!loading && !error && data?.items.length === 0 ? (
         <EmptyState
+          icon={<ClipboardList />}
           title={status ? `No ${status.toLowerCase()} assignments` : "No assignments yet"}
           description={
             status
@@ -114,20 +127,19 @@ export default function TeacherAssignmentsPage() {
           }
           action={
             <Link href="/teacher/assignments/new">
-              <Button>New assignment</Button>
+              <Button icon={<Plus />}>New assignment</Button>
             </Link>
           }
         />
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           <TableWrap>
             <THead>
-              <TR>
+              <TR hover={false}>
                 <TH>Title</TH>
                 <TH>Class / Subject</TH>
                 <TH>Status</TH>
                 <TH>Deadline</TH>
-                <TH align="right">Max marks</TH>
                 <TH align="right">Actions</TH>
               </TR>
             </THead>
@@ -141,71 +153,73 @@ export default function TeacherAssignmentsPage() {
 
                   return (
                     <TR key={assignment.id}>
-                      <TD className="font-medium text-slate-900">{assignment.title}</TD>
+                      <TDPrimary>
+                        <Link
+                          href={`/teacher/assignments/${assignment.id}/edit`}
+                          className="transition-colors duration-150 hover:text-indigo-600"
+                        >
+                          {assignment.title}
+                        </Link>
+                        <span className="block text-xs font-normal tabular-nums text-gray-400">
+                          {assignment.maxMarks} marks
+                        </span>
+                      </TDPrimary>
 
                       <TD>
-                        <span className="block">{assignment.className}</span>
-                        <span className="block text-xs text-slate-500">{assignment.subjectName}</span>
+                        <span className="block text-gray-700">{assignment.className}</span>
+                        <span className="block text-xs text-gray-400">{assignment.subjectName}</span>
                       </TD>
 
                       <TD>
                         <div className="flex flex-wrap items-center gap-1">
                           <AssignmentStatusBadge status={assignment.status} />
-                          {/* Only meaningful once published — a draft's deadline has nothing to be late for. */}
-                          {assignment.status === "Published" && (
-                            <OverdueBadge isOverdue={assignment.isOverdue} />
-                          )}
-                          {assignment.allowLateSubmission && <Badge tone="info">Late allowed</Badge>}
+                          {assignment.allowLateSubmission && <Badge tone="info">Late OK</Badge>}
                         </div>
                       </TD>
 
-                      <TD className="whitespace-nowrap">{formatDateTime(assignment.deadline)}</TD>
-
-                      <TD align="right" className="tabular-nums">
-                        {assignment.maxMarks}
+                      <TD>
+                        <DeadlineLabel deadline={assignment.deadline} />
                       </TD>
 
                       <TD align="right">
-                        {/* No flex-wrap: wrapping put Delete on its own line and made the column look
-                            broken. TableWrap already scrolls horizontally, which is the better answer on
-                            a narrow screen than a ragged stack of buttons. */}
-                        <div className="flex justify-end gap-1.5 whitespace-nowrap">
+                        {/* Icon-only, revealed on row hover. Four text buttons per row turned this
+                            table into a wall of words; see RowActions for why they stay visible to
+                            keyboard and touch users. */}
+                        <RowActions>
                           {/* Drafts have no submissions to review, so the link would always be empty. */}
                           {assignment.status === "Published" && (
-                            <Link href={`/teacher/assignments/${assignment.id}/submissions`}>
-                              <Button size="sm" variant="secondary">
-                                Submissions
-                              </Button>
-                            </Link>
+                            <IconLink
+                              href={`/teacher/assignments/${assignment.id}/submissions`}
+                              label="View submissions"
+                              icon={<Send />}
+                            />
                           )}
 
-                          <Link href={`/teacher/assignments/${assignment.id}/edit`}>
-                            <Button size="sm" variant="secondary">
-                              Edit
-                            </Button>
-                          </Link>
+                          <IconLink
+                            href={`/teacher/assignments/${assignment.id}/edit`}
+                            label="Edit assignment"
+                            icon={<Pencil />}
+                          />
 
                           {assignment.status === "Draft" && (
-                            <Button
-                              size="sm"
+                            <IconButton
+                              label="Publish assignment"
+                              icon={<Upload />}
                               loading={isBusy}
                               onClick={() =>
                                 void runAction(assignment.id, () => publishAssignment(assignment.id))
                               }
-                            >
-                              Publish
-                            </Button>
+                            />
                           )}
 
-                          <Button
-                            size="sm"
-                            variant="danger"
+                          <IconButton
+                            label="Delete assignment"
+                            icon={<Trash2 />}
+                            tone="danger"
                             loading={isBusy}
                             onClick={() => handleDelete(assignment.id, assignment.title)}
-                          >
-                            Delete
-                          </Button>
-                        </div>
+                          />
+                        </RowActions>
                       </TD>
                     </TR>
                   );

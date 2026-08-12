@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Send } from "lucide-react";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Textarea } from "@/components/ui/Textarea";
@@ -110,7 +111,7 @@ export function SubmissionForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-5">
       {mode === "submit-late" && (
         <Alert tone="warning">
           The deadline has passed. You can still submit, but your work will be recorded as{" "}
@@ -134,13 +135,14 @@ export function SubmissionForm({
         maxLength={ANSWER_MAX}
         showCount
         value={answerText}
+        className="min-h-60"
         placeholder="Type your answer here."
         error={errors.answerText?.message}
         {...register("answerText")}
       />
 
       <div>
-        <Button type="submit" loading={isSubmitting}>
+        <Button type="submit" icon={<Send />} loading={isSubmitting}>
           {submission === null ? "Submit answer" : "Update answer"}
         </Button>
       </div>

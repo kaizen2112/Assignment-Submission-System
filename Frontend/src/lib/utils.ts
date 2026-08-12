@@ -1,4 +1,4 @@
-import type { AssignmentStatus, SubmissionStatus } from "@/types/api";
+import type { AssignmentStatus, Role, SubmissionStatus } from "@/types/api";
 
 // Joins class names, dropping falsy entries so `cn("a", cond && "b")` reads cleanly at call sites.
 export function cn(...classes: (string | false | null | undefined)[]): string {
@@ -52,10 +52,26 @@ export function formatRelative(iso: string): string {
 
 // Status → Badge tone. Kept here rather than inside Badge so the mapping is testable and reusable in
 // a table cell that is not a Badge.
-export type BadgeTone = "neutral" | "info" | "success" | "warning" | "danger";
+//
+// One tone per status the system can be in, so no two statuses ever share a colour: a student scanning a
+// list should be able to tell Submitted from Late without reading the word.
+//
+// `purple` and `teal` are the exception — they are not statuses. They exist for the role pill, and are
+// deliberately outside the status palette so a role can never be mistaken for a state.
+export type BadgeTone =
+  | "neutral"
+  | "info"
+  | "success"
+  | "warning"
+  | "danger"
+  | "accent"
+  | "late"
+  | "purple"
+  | "teal";
 
 export function assignmentStatusTone(status: AssignmentStatus): BadgeTone {
-  return status === "Published" ? "success" : "neutral";
+  // Draft is neutral on purpose — it is the absence of a state, not a warning.
+  return status === "Published" ? "info" : "neutral";
 }
 
 export function submissionStatusTone(status: SubmissionStatus): BadgeTone {
@@ -63,12 +79,57 @@ export function submissionStatusTone(status: SubmissionStatus): BadgeTone {
     case "Graded":
       return "success";
     case "Submitted":
-      return "info";
-    case "Late":
       return "warning";
+    // Its own tone rather than sharing amber with Submitted: "arrived, but late" is a different fact
+    // from "arrived", and the two appear side by side.
+    case "Late":
+      return "late";
     case "NotSubmitted":
-      return "neutral";
+      return "danger";
   }
+}
+
+// A role is coloured the same wherever it appears — the pill in the top bar and the Role column of the
+// admin users table are the same fact about the same person, so they must not disagree.
+export const ROLE_TONES: Record<Role, BadgeTone> = {
+  Admin: "purple",
+  Teacher: "accent",
+  Student: "teal",
+};
+
+// --- Deadline urgency ----------------------------------------------------------------------------
+
+// How close a deadline is, as a decision rather than a raw date — so DeadlineLabel, the assignment
+// cards and any future countdown all agree on when "soon" starts.
+export type DeadlineUrgency = "past" | "today" | "tomorrow" | "soon" | "distant";
+
+const DAY_MS = 86_400_000;
+
+export function deadlineUrgency(iso: string, now: number = Date.now()): DeadlineUrgency {
+  const remaining = new Date(iso).getTime() - now;
+
+  if (remaining <= 0) return "past";
+  if (remaining < DAY_MS) return "today";
+  if (remaining < 2 * DAY_MS) return "tomorrow";
+  // 7 days is the boundary between "plan for it" and "act on it".
+  return remaining < 7 * DAY_MS ? "soon" : "distant";
+}
+
+// Whole days remaining, rounded up: 1.2 days left is "2 days" to a student looking at a calendar.
+export function daysUntil(iso: string, now: number = Date.now()): number {
+  return Math.ceil((new Date(iso).getTime() - now) / DAY_MS);
+}
+
+// Initials for an avatar. Two letters from the first and last word — "Ayesha Rahman" → "AR" — falling
+// back to one for a single-word name and to "?" for an empty one, which is what a null profile renders
+// as while /auth/me is still in flight.
+export function initials(fullName: string | undefined | null): string {
+  const words = (fullName ?? "").trim().split(/\s+/).filter(Boolean);
+
+  if (words.length === 0) return "?";
+  if (words.length === 1) return words[0]!.slice(0, 2).toUpperCase();
+
+  return (words[0]![0]! + words[words.length - 1]![0]!).toUpperCase();
 }
 
 // "45 / 50" for a graded submission, an em dash while it is still ungraded — 0 is a real mark, so a

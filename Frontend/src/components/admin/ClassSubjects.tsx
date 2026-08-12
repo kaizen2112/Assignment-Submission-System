@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { BookOpen, Plus } from "lucide-react";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { Section } from "@/components/ui/Section";
+import { Section, SectionFooter } from "@/components/ui/Section";
 import { ApiError } from "@/lib/api";
 import { addSubject } from "@/lib/admin";
 import { SUBJECT_NAME_MAX, subjectSchema } from "@/lib/schemas";
@@ -69,47 +70,42 @@ export function ClassSubjects({
   return (
     <Section
       title="Subjects"
+      icon={<BookOpen />}
       description="A teacher is granted one subject in one class at a time, so subjects come first."
     >
       {formError && <Alert className="mb-4">{formError}</Alert>}
 
-      <div className="mb-4">
-        {subjects.length === 0 ? (
-          <p className="text-sm text-slate-500">
-            No subjects yet. Add one before assigning a teacher.
-          </p>
-        ) : (
-          <div className="flex flex-wrap gap-1.5">
-            {subjects.map((subject) => (
-              <Badge key={subject.id} tone="info">
-                {subject.name}
-              </Badge>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        noValidate
-        className="flex flex-wrap items-start gap-3 border-t border-slate-100 pt-4"
-      >
-        <div className="w-64">
-          <Input
-            label="Add a subject"
-            required
-            maxLength={SUBJECT_NAME_MAX}
-            placeholder="Mathematics"
-            error={errors.name?.message}
-            {...register("name")}
-          />
+      {subjects.length === 0 ? (
+        <p className="text-sm text-gray-500">No subjects yet. Add one before assigning a teacher.</p>
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          {subjects.map((subject) => (
+            <Badge key={subject.id} tone="accent">
+              {subject.name}
+            </Badge>
+          ))}
         </div>
+      )}
 
-        {/* mt-6 lines the button up with the input rather than with its label. */}
-        <Button type="submit" className="mt-6" loading={isSubmitting}>
-          Add subject
-        </Button>
-      </form>
+      <SectionFooter>
+        <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-wrap items-start gap-3">
+          <div className="w-full sm:w-64">
+            <Input
+              label="Add a subject"
+              required
+              maxLength={SUBJECT_NAME_MAX}
+              placeholder="Mathematics"
+              error={errors.name?.message}
+              {...register("name")}
+            />
+          </div>
+
+          {/* mt-7 lines the button up with the input rather than with its label. */}
+          <Button type="submit" icon={<Plus />} className="sm:mt-7" loading={isSubmitting}>
+            Add subject
+          </Button>
+        </form>
+      </SectionFooter>
     </Section>
   );
 }

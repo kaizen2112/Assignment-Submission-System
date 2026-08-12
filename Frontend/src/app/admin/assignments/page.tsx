@@ -1,16 +1,26 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { ClipboardList } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Alert } from "@/components/ui/Alert";
-import { AssignmentStatusBadge, Badge, OverdueBadge } from "@/components/ui/Badge";
+import { AssignmentStatusBadge, Badge } from "@/components/ui/Badge";
+import { DeadlineLabel } from "@/components/ui/DeadlineLabel";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Pagination } from "@/components/ui/Pagination";
 import { Select } from "@/components/ui/Select";
-import { TableSkeleton, TBody, TD, TH, THead, TR, TableWrap } from "@/components/ui/Table";
+import {
+  TableSkeleton,
+  TBody,
+  TD,
+  TDPrimary,
+  TH,
+  THead,
+  TR,
+  TableWrap,
+} from "@/components/ui/Table";
 import { useAsync } from "@/hooks/useAsync";
 import { listAllAssignments, listAllClasses } from "@/lib/admin";
-import { formatDateTime } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZE } from "@/types/api";
 import type { AssignmentStatus } from "@/types/api";
 
@@ -52,10 +62,11 @@ export default function AdminAssignmentsPage() {
       <PageHeader
         title="All assignments"
         subtitle="Every assignment in the system, from every teacher — drafts included."
+        crumbs={[{ label: "Admin" }, { label: "All assignments" }]}
       />
 
-      <div className="mb-4 flex flex-wrap gap-3">
-        <div className="w-56">
+      <div className="mb-5 flex flex-wrap gap-3">
+        <div className="w-full sm:w-48">
           <Select
             label="Filter by status"
             value={status}
@@ -71,7 +82,7 @@ export default function AdminAssignmentsPage() {
           />
         </div>
 
-        <div className="w-56">
+        <div className="w-full sm:w-56">
           <Select
             label="Filter by class"
             value={classId}
@@ -90,10 +101,11 @@ export default function AdminAssignmentsPage() {
         </div>
       </div>
 
-      {error && <Alert className="mb-4">{error}</Alert>}
+      {error && <Alert className="mb-6">{error}</Alert>}
 
       {!loading && !error && data?.items.length === 0 ? (
         <EmptyState
+          icon={<ClipboardList />}
           title="No assignments match"
           description={
             status || classId
@@ -102,10 +114,10 @@ export default function AdminAssignmentsPage() {
           }
         />
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           <TableWrap>
             <THead>
-              <TR>
+              <TR hover={false}>
                 <TH>Title</TH>
                 <TH>Class / Subject</TH>
                 <TH>Status</TH>
@@ -120,25 +132,25 @@ export default function AdminAssignmentsPage() {
               <TBody>
                 {data?.items.map((assignment) => (
                   <TR key={assignment.id}>
-                    <TD className="font-medium text-slate-900">{assignment.title}</TD>
+                    <TDPrimary>{assignment.title}</TDPrimary>
 
                     <TD>
-                      <span className="block">{assignment.className}</span>
-                      <span className="block text-xs text-slate-500">{assignment.subjectName}</span>
+                      <span className="block text-gray-700">{assignment.className}</span>
+                      <span className="block text-xs text-gray-400">{assignment.subjectName}</span>
                     </TD>
 
                     <TD>
                       <div className="flex flex-wrap items-center gap-1">
                         <AssignmentStatusBadge status={assignment.status} />
-                        {/* A draft's deadline has nothing to be late for. */}
-                        {assignment.status === "Published" && (
-                          <OverdueBadge isOverdue={assignment.isOverdue} />
-                        )}
-                        {assignment.allowLateSubmission && <Badge tone="info">Late allowed</Badge>}
+                        {assignment.allowLateSubmission && <Badge tone="info">Late OK</Badge>}
                       </div>
                     </TD>
 
-                    <TD className="whitespace-nowrap">{formatDateTime(assignment.deadline)}</TD>
+                    {/* DeadlineLabel already strikes the date through and says "Closed" once it has
+                        passed, which is what the separate Overdue chip used to carry. */}
+                    <TD>
+                      <DeadlineLabel deadline={assignment.deadline} />
+                    </TD>
 
                     <TD align="right" className="tabular-nums">
                       {assignment.maxMarks}

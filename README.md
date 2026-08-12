@@ -45,6 +45,11 @@ frontend is treated as untrusted. Hiding a button is presentation; returning `40
 - **A complete web UI for all three roles**, including administration — creating users, classes and
   subjects, granting teachers their class + subject, and enrolling students are all screens. Swagger is
   there to inspect the API, not because anything requires it.
+- **One design system, not per-page styling** — a 17-component `components/ui` layer owns every card,
+  chip, table, skeleton and empty state, so the status-colour map and the type scale exist in exactly one
+  place each. Every list has a skeleton loader, every empty result an explanation, every status a coloured
+  chip; the layout is responsive down to 390px with an off-canvas drawer. See
+  [docs/07_frontend.md](docs/07_frontend.md#design-system).
 - **Swagger UI** with a working **Authorize** button, so every endpoint can be exercised from a
   browser.
 - **85 unit tests** covering all 8 business rules and the role guards.
@@ -210,7 +215,8 @@ sequenceDiagram
 | Next.js | **16.3.0** (App Router, Turbopack) |
 | React | 19.2.8 |
 | TypeScript | 5.9.3 (strict, no `any`) |
-| Tailwind CSS | 4.3.3 |
+| Tailwind CSS | 4.3.3 (configured in CSS via `@theme` — there is no `tailwind.config.js`) |
+| lucide-react | 1.31.0 (icons; the only UI dependency) |
 | react-hook-form | 7.85.0 |
 | Zod | 4.4.3 |
 | @hookform/resolvers | 5.7.1 |
@@ -309,7 +315,13 @@ Assignment-Submission-System/
         │   ├── teacher/            # dashboard, assignments, new, [id]/edit,
         │   │                       # [id]/submissions, [id]/submissions/[submissionId]
         │   └── student/            # dashboard, assignments, assignments/[id], submissions
-        ├── components/             # layout/, ui/, admin/, teacher/, student/
+        ├── components/
+        │   ├── ui/                 # the design system — Card, Section, Table, Badge, Skeleton,
+        │   │                       # StatCard, EmptyState, Alert, Button, Input, Textarea, Select,
+        │   │                       # Pagination, IconButton, Avatar, DeadlineLabel, MarksMeter
+        │   ├── layout/             # AppShell, TopNav, Sidebar, PageHeader, WelcomeHeader,
+        │   │                       # SessionContext, RoleGuard
+        │   └── admin/ teacher/ student/   # role-specific composites
         ├── hooks/                  # useAsync, useHydrated
         ├── lib/                    # api client, auth, schemas, admin, assignments, dashboard, utils
         └── types/                  # api.ts — response shapes

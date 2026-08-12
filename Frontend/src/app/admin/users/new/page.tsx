@@ -5,10 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { UserPlus } from "lucide-react";
 import { UserFields } from "@/components/admin/UserFields";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
+import { FormActions, FormCard } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { ApiError } from "@/lib/api";
 import { createUser } from "@/lib/admin";
@@ -78,35 +80,43 @@ export default function NewUserPage() {
         subtitle="The account works immediately. Teachers and students still need a class before they can do anything."
         backHref="/admin/users"
         backLabel="Users"
+        crumbs={[{ label: "Users", href: "/admin/users" }, { label: "New" }]}
       />
 
-      {formError && <Alert className="mb-4">{formError}</Alert>}
+      {formError && <Alert className="mb-6">{formError}</Alert>}
 
       <FormProvider {...methods}>
         <form
           onSubmit={handleSubmit(onSubmit)}
           noValidate
-          className="flex max-w-2xl flex-col gap-4 rounded-lg border border-slate-200 bg-white p-6"
+          className="flex max-w-2xl flex-col gap-6"
         >
-          <UserFields />
+          <FormCard label="Account">
+            <UserFields />
+          </FormCard>
 
-          <Input
+          <FormCard
             label="Password"
-            // type="text", not "password". This is an admin typing a credential they must then read out
-            // to someone else — masking it invites a typo nobody can see, and there is no self-service
-            // reset anywhere in the system to recover from one.
-            type="text"
-            required
-            autoComplete="off"
-            maxLength={PASSWORD_MAX}
-            placeholder="Learn2026"
-            hint={`At least ${PASSWORD_MIN} characters, with at least one letter and one digit. Write it down — you will need to give it to the user.`}
-            error={errors.password?.message}
-            {...register("password")}
-          />
+            description="There is no self-service reset, so an admin sets and communicates this."
+          >
+            <Input
+              label="Password"
+              // type="text", not "password". This is an admin typing a credential they must then read
+              // out to someone else — masking it invites a typo nobody can see, and there is no
+              // self-service reset anywhere in the system to recover from one.
+              type="text"
+              required
+              autoComplete="off"
+              maxLength={PASSWORD_MAX}
+              placeholder="Learn2026"
+              hint={`At least ${PASSWORD_MIN} characters, with at least one letter and one digit. Write it down — you will need to give it to the user.`}
+              error={errors.password?.message}
+              {...register("password")}
+            />
+          </FormCard>
 
-          <div className="mt-2 flex flex-wrap gap-2">
-            <Button type="submit" loading={isSubmitting}>
+          <FormActions>
+            <Button type="submit" icon={<UserPlus />} loading={isSubmitting}>
               Create user
             </Button>
 
@@ -115,7 +125,7 @@ export default function NewUserPage() {
                 Cancel
               </Button>
             </Link>
-          </div>
+          </FormActions>
         </form>
       </FormProvider>
     </>

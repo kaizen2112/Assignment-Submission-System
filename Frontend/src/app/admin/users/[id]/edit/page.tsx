@@ -5,11 +5,14 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Save } from "lucide-react";
 import { UserFields } from "@/components/admin/UserFields";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
+import { FormActions, FormCard } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { Skeleton, SkeletonRegion } from "@/components/ui/Skeleton";
 import { useAsync } from "@/hooks/useAsync";
 import { ApiError } from "@/lib/api";
 import { findUser, updateUser } from "@/lib/admin";
@@ -102,9 +105,14 @@ export default function EditUserPage() {
     return (
       <>
         <PageHeader title="Edit user" backHref="/admin/users" backLabel="Users" />
-        <p role="status" className="text-sm text-slate-500">
-          Loading…
-        </p>
+        <SkeletonRegion label="Loading user" className="max-w-2xl">
+          <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+            <Skeleton className="mb-5 h-3 w-24" />
+            <Skeleton className="mb-4 h-10 w-full rounded-lg" />
+            <Skeleton className="mb-4 h-10 w-full rounded-lg" />
+            <Skeleton className="h-10 w-full rounded-lg" />
+          </div>
+        </SkeletonRegion>
       </>
     );
   }
@@ -113,7 +121,7 @@ export default function EditUserPage() {
     return (
       <>
         <PageHeader title="Edit user" backHref="/admin/users" backLabel="Users" />
-        <Alert className="mb-4">{loadError ?? "This user could not be found."}</Alert>
+        <Alert className="mb-6">{loadError ?? "This user could not be found."}</Alert>
         <Link href="/admin/users">
           <Button variant="secondary">Back to users</Button>
         </Link>
@@ -128,39 +136,47 @@ export default function EditUserPage() {
         subtitle={`Account created ${formatDateTime(user.createdAt)}`}
         backHref="/admin/users"
         backLabel="Users"
+        crumbs={[{ label: "Users", href: "/admin/users" }, { label: user.fullName }]}
       />
 
-      {formError && <Alert className="mb-4">{formError}</Alert>}
+      {formError && <Alert className="mb-6">{formError}</Alert>}
 
       <FormProvider {...methods}>
         <form
           onSubmit={handleSubmit(onSubmit)}
           noValidate
-          className="flex max-w-2xl flex-col gap-4 rounded-lg border border-slate-200 bg-white p-6"
+          className="flex max-w-2xl flex-col gap-6"
         >
-          <UserFields />
+          <FormCard label="Account">
+            <UserFields />
 
-          {/* Changing a role is refused with a 409 once the user has assignments or submissions on
-              record — their existing rows would describe someone whose role makes those rows
-              impossible. Said up front, because the form cannot tell in advance which users are
-              affected: nothing in the list response reports it. */}
-          <Alert tone="info">
-            A role can only be changed while the user has no assignments or submissions on record.
-          </Alert>
+            {/* Changing a role is refused with a 409 once the user has assignments or submissions on
+                record — their existing rows would describe someone whose role makes those rows
+                impossible. Said up front, because the form cannot tell in advance which users are
+                affected: nothing in the list response reports it. */}
+            <Alert tone="info">
+              A role can only be changed while the user has no assignments or submissions on record.
+            </Alert>
+          </FormCard>
 
-          <Input
-            label="New password"
-            type="text"
-            autoComplete="off"
-            maxLength={PASSWORD_MAX}
-            placeholder="Leave blank to keep the current password"
-            hint={`Only fill this in to reset the password. At least ${PASSWORD_MIN} characters, with at least one letter and one digit.`}
-            error={errors.newPassword?.message}
-            {...register("newPassword")}
-          />
+          <FormCard
+            label="Reset password"
+            description="Leave blank to keep the current password."
+          >
+            <Input
+              label="New password"
+              type="text"
+              autoComplete="off"
+              maxLength={PASSWORD_MAX}
+              placeholder="Leave blank to keep the current password"
+              hint={`Only fill this in to reset the password. At least ${PASSWORD_MIN} characters, with at least one letter and one digit.`}
+              error={errors.newPassword?.message}
+              {...register("newPassword")}
+            />
+          </FormCard>
 
-          <div className="mt-2 flex flex-wrap gap-2">
-            <Button type="submit" loading={isSubmitting}>
+          <FormActions>
+            <Button type="submit" icon={<Save />} loading={isSubmitting}>
               Save changes
             </Button>
 
@@ -169,7 +185,7 @@ export default function EditUserPage() {
                 Cancel
               </Button>
             </Link>
-          </div>
+          </FormActions>
         </form>
       </FormProvider>
     </>

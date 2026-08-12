@@ -4,14 +4,25 @@ import { useCallback, useState } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Layers, Plus, Settings2, X } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { FormCard } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
 import { Pagination } from "@/components/ui/Pagination";
-import { TableSkeleton, TBody, TD, TH, THead, TR, TableWrap } from "@/components/ui/Table";
+import {
+  TableSkeleton,
+  TBody,
+  TD,
+  TDPrimary,
+  TH,
+  THead,
+  TR,
+  TableWrap,
+} from "@/components/ui/Table";
 import { useAsync } from "@/hooks/useAsync";
 import { ApiError } from "@/lib/api";
 import { createClass, listClasses } from "@/lib/admin";
@@ -89,9 +100,11 @@ export default function AdminClassesPage() {
       <PageHeader
         title="Classes"
         subtitle="A class holds subjects, the teachers who teach them, and the students enrolled."
+        crumbs={[{ label: "Admin" }, { label: "Classes" }]}
         action={
           <Button
             variant={showForm ? "secondary" : "primary"}
+            icon={showForm ? <X /> : <Plus />}
             onClick={() => setShowForm((open) => !open)}
           >
             {showForm ? "Cancel" : "New class"}
@@ -100,53 +113,58 @@ export default function AdminClassesPage() {
       />
 
       {showForm && (
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          noValidate
-          className="mb-6 flex max-w-2xl flex-col gap-4 rounded-lg border border-slate-200 bg-white p-6"
-        >
-          {formError && <Alert>{formError}</Alert>}
+        <form onSubmit={handleSubmit(onSubmit)} noValidate className="mb-6 max-w-2xl">
+          <FormCard label="New class">
+            {formError && <Alert>{formError}</Alert>}
 
-          <Input
-            label="Name"
-            required
-            maxLength={CLASS_NAME_MAX}
-            placeholder="Class 10 - A"
-            error={errors.name?.message}
-            {...register("name")}
-          />
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Input
+                label="Name"
+                required
+                maxLength={CLASS_NAME_MAX}
+                placeholder="Class 10 - A"
+                error={errors.name?.message}
+                {...register("name")}
+              />
 
-          <Input
-            label="Code"
-            required
-            maxLength={CLASS_CODE_MAX}
-            placeholder="10A"
-            hint="Letters, digits and hyphens only. Must be unique — codes are compared case-insensitively."
-            error={errors.code?.message}
-            {...register("code")}
-          />
+              <Input
+                label="Code"
+                required
+                maxLength={CLASS_CODE_MAX}
+                placeholder="10A"
+                hint="Letters, digits and hyphens only. Compared case-insensitively."
+                error={errors.code?.message}
+                {...register("code")}
+              />
+            </div>
 
-          <div className="mt-2">
-            <Button type="submit" loading={isSubmitting}>
-              Create class
-            </Button>
-          </div>
+            <div>
+              <Button type="submit" icon={<Plus />} loading={isSubmitting}>
+                Create class
+              </Button>
+            </div>
+          </FormCard>
         </form>
       )}
 
-      {error && <Alert className="mb-4">{error}</Alert>}
+      {error && <Alert className="mb-6">{error}</Alert>}
 
       {!loading && !error && data?.items.length === 0 ? (
         <EmptyState
+          icon={<Layers />}
           title="No classes yet"
           description="A class is the first thing to create. Assignments belong to a class and a subject, so nothing else can be set up until one exists."
-          action={<Button onClick={() => setShowForm(true)}>New class</Button>}
+          action={
+            <Button icon={<Plus />} onClick={() => setShowForm(true)}>
+              New class
+            </Button>
+          }
         />
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           <TableWrap>
             <THead>
-              <TR>
+              <TR hover={false}>
                 <TH>Code</TH>
                 <TH>Name</TH>
                 <TH>Subjects</TH>
@@ -161,18 +179,25 @@ export default function AdminClassesPage() {
               <TBody>
                 {data?.items.map((schoolClass) => (
                   <TR key={schoolClass.id}>
-                    <TD className="font-medium text-slate-900">{schoolClass.code}</TD>
+                    <TDPrimary>
+                      <Link
+                        href={`/admin/classes/${schoolClass.id}`}
+                        className="transition-colors duration-150 hover:text-indigo-600"
+                      >
+                        {schoolClass.code}
+                      </Link>
+                    </TDPrimary>
 
-                    <TD>{schoolClass.name}</TD>
+                    <TD className="text-gray-700">{schoolClass.name}</TD>
 
                     <TD>
                       {/* The list response nests subjects, so no second request is needed to show them. */}
                       {schoolClass.subjects.length === 0 ? (
-                        <span className="text-xs text-slate-500">None yet</span>
+                        <span className="text-xs text-gray-400">None yet</span>
                       ) : (
                         <div className="flex flex-wrap gap-1">
                           {schoolClass.subjects.map((subject) => (
-                            <Badge key={subject.id} tone="info">
+                            <Badge key={subject.id} tone="accent">
                               {subject.name}
                             </Badge>
                           ))}
@@ -180,11 +205,16 @@ export default function AdminClassesPage() {
                       )}
                     </TD>
 
-                    <TD className="whitespace-nowrap">{formatDate(schoolClass.createdAt)}</TD>
+                    <TD className="whitespace-nowrap text-xs text-gray-500">
+                      {formatDate(schoolClass.createdAt)}
+                    </TD>
 
                     <TD align="right">
+                      {/* Visible, not hover-revealed. Managing a class is the only reason to be on this
+                          page, and hiding the way in behind a hover would bury it. The hover-icon
+                          pattern is for secondary actions beside a primary one. */}
                       <Link href={`/admin/classes/${schoolClass.id}`}>
-                        <Button size="sm" variant="secondary">
+                        <Button size="sm" variant="secondary" icon={<Settings2 />}>
                           Manage
                         </Button>
                       </Link>

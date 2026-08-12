@@ -3,11 +3,14 @@
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { Award, CalendarClock, FileText, Target, Timer } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { SubmissionForm } from "@/components/student/SubmissionForm";
 import { Alert } from "@/components/ui/Alert";
 import { Badge, LateBadge, OverdueBadge, SubmissionStatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { Card, CardLabel } from "@/components/ui/Card";
+import { Skeleton, SkeletonRegion, TextSkeleton } from "@/components/ui/Skeleton";
 import { useAsync } from "@/hooks/useAsync";
 import { getAssignment, getMySubmission } from "@/lib/assignments";
 import { formatDateTime, formatMarks, formatRelative } from "@/lib/utils";
@@ -41,9 +44,23 @@ export default function StudentAssignmentDetailPage() {
     return (
       <>
         <PageHeader title="Assignment" backHref="/student/assignments" backLabel="Assignments" />
-        <p role="status" className="text-sm text-slate-500">
-          Loading…
-        </p>
+        <SkeletonRegion label="Loading assignment" className="flex flex-col gap-6">
+          <Card className="p-6">
+            <div className="mb-6 grid gap-6 sm:grid-cols-3">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-4 w-32" />
+                </div>
+              ))}
+            </div>
+            <TextSkeleton lines={4} />
+          </Card>
+          <Card className="p-6">
+            <Skeleton className="mb-4 h-4 w-40" />
+            <Skeleton className="h-40 w-full rounded-lg" />
+          </Card>
+        </SkeletonRegion>
       </>
     );
   }
@@ -55,7 +72,7 @@ export default function StudentAssignmentDetailPage() {
     return (
       <>
         <PageHeader title="Assignment" backHref="/student/assignments" backLabel="Assignments" />
-        <Alert className="mb-4">{error ?? "This assignment could not be found."}</Alert>
+        <Alert className="mb-6">{error ?? "This assignment could not be found."}</Alert>
         <Link href="/student/assignments">
           <Button variant="secondary">Back to assignments</Button>
         </Link>
@@ -72,8 +89,12 @@ export default function StudentAssignmentDetailPage() {
         subtitle={`${assignment.className} — ${assignment.subjectName}`}
         backHref="/student/assignments"
         backLabel="Assignments"
+        crumbs={[
+          { label: "Assignments", href: "/student/assignments" },
+          { label: assignment.title },
+        ]}
         action={
-          <div className="flex flex-wrap items-center gap-1">
+          <div className="flex flex-wrap items-center gap-1.5">
             <OverdueBadge isOverdue={assignment.isOverdue} />
             {assignment.allowLateSubmission && <Badge tone="info">Late allowed</Badge>}
             {submission && <SubmissionStatusBadge status={submission.status} />}
@@ -82,80 +103,113 @@ export default function StudentAssignmentDetailPage() {
       />
 
       <div className="flex flex-col gap-6">
-        <section aria-label="Assignment details" className="rounded-lg border border-slate-200 bg-white p-4">
-          <dl className="grid gap-4 sm:grid-cols-3">
-            <div>
-              <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">Deadline</dt>
-              <dd className="mt-1 text-sm text-slate-900">{formatDateTime(assignment.deadline)}</dd>
-              <dd className="text-xs text-slate-500">{formatRelative(assignment.deadline)}</dd>
-            </div>
-
-            <div>
-              <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">Max marks</dt>
-              <dd className="mt-1 text-sm tabular-nums text-slate-900">{assignment.maxMarks}</dd>
-            </div>
-
-            <div>
-              <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                Late submissions
-              </dt>
-              <dd className="mt-1 text-sm text-slate-900">
-                {assignment.allowLateSubmission ? "Accepted" : "Not accepted"}
-              </dd>
-            </div>
-          </dl>
-
-          <div className="mt-4 border-t border-slate-100 pt-4">
-            <h2 className="text-xs font-medium uppercase tracking-wide text-slate-500">Description</h2>
-            {/* whitespace-pre-wrap: the teacher's line breaks are meaningful, and rendering this as
-                HTML would both lose them and invite injection. */}
-            <p className="mt-1 whitespace-pre-wrap wrap-break-word text-sm text-slate-800">
-              {assignment.description}
-            </p>
-          </div>
-        </section>
-
         {/* Marks and feedback, shown only once graded. This is the payoff of the whole flow, so it sits
-            above the answer rather than below it. */}
+            first rather than below the answer.
+
+            Green card rather than the usual white: this is the one panel in the app a student is looking
+            for, and it should be findable without reading a heading. */}
         {submission?.status === "Graded" && (
           <section
             aria-label="Your grade"
-            className="rounded-lg border border-emerald-200 bg-emerald-50 p-4"
+            className="rounded-xl border border-green-200 bg-green-50 p-6"
           >
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="text-sm font-semibold text-emerald-900">Your grade</h2>
-              <p className="text-2xl font-semibold tabular-nums text-emerald-900">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <span
+                  aria-hidden="true"
+                  className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-green-100 text-green-700"
+                >
+                  <Award className="size-5" />
+                </span>
+                <div>
+                  <h2 className="text-base font-semibold text-green-900">Your grade</h2>
+                  <p className="mt-0.5 text-xs text-green-700">
+                    Graded {formatDateTime(submission.gradedAt)}
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-3xl font-bold tabular-nums text-green-900">
                 {formatMarks(submission.marks, submission.maxMarks)}
               </p>
             </div>
 
-            <p className="mt-1 text-xs text-emerald-800">
-              Graded {formatDateTime(submission.gradedAt)}
-            </p>
-
             {submission.feedback ? (
-              <div className="mt-3 border-t border-emerald-200 pt-3">
-                <h3 className="text-xs font-medium uppercase tracking-wide text-emerald-700">
+              <div className="mt-5 border-t border-green-200 pt-5">
+                <CardLabel as="h3" className="text-green-700">
                   Feedback
-                </h3>
-                <p className="mt-1 whitespace-pre-wrap wrap-break-word text-sm text-emerald-900">
+                </CardLabel>
+                <p className="mt-2 whitespace-pre-wrap wrap-break-word border-l-2 border-green-300 pl-4 text-sm leading-relaxed text-green-900">
                   {submission.feedback}
                 </p>
               </div>
             ) : (
-              <p className="mt-3 text-xs text-emerald-800">Your teacher left no written feedback.</p>
+              <p className="mt-4 text-sm text-green-800">
+                Your teacher left no written feedback.
+              </p>
             )}
           </section>
         )}
 
-        <section aria-label="Your submission" className="rounded-lg border border-slate-200 bg-white p-4">
-          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-sm font-semibold text-slate-900">
+        <Card as="section" aria-label="Assignment details" className="p-6">
+          <dl className="grid gap-5 sm:grid-cols-3">
+            {[
+              {
+                icon: <CalendarClock />,
+                label: "Deadline",
+                value: formatDateTime(assignment.deadline),
+                sub: formatRelative(assignment.deadline),
+              },
+              {
+                icon: <Target />,
+                label: "Max marks",
+                value: String(assignment.maxMarks),
+              },
+              {
+                icon: <Timer />,
+                label: "Late submissions",
+                value: assignment.allowLateSubmission ? "Accepted" : "Not accepted",
+              },
+            ].map((item) => (
+              <div key={item.label} className="flex items-start gap-3">
+                <span
+                  aria-hidden="true"
+                  className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gray-50 text-gray-400 [&>svg]:size-4"
+                >
+                  {item.icon}
+                </span>
+                <div className="min-w-0">
+                  <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                    {item.label}
+                  </dt>
+                  <dd className="mt-0.5 text-sm font-medium text-gray-900">{item.value}</dd>
+                  {item.sub && <dd className="text-xs text-gray-500">{item.sub}</dd>}
+                </div>
+              </div>
+            ))}
+          </dl>
+
+          <div className="mt-6 border-t border-gray-100 pt-6">
+            <div className="mb-3 flex items-center gap-2">
+              <FileText aria-hidden="true" className="size-3.5 text-gray-400" />
+              <CardLabel as="h2">Description</CardLabel>
+            </div>
+            {/* whitespace-pre-wrap: the teacher's line breaks are meaningful, and rendering this as
+                HTML would both lose them and invite injection. */}
+            <p className="whitespace-pre-wrap wrap-break-word border-l-2 border-gray-200 pl-4 text-sm leading-relaxed text-gray-700">
+              {assignment.description}
+            </p>
+          </div>
+        </Card>
+
+        <Card as="section" aria-label="Your submission" className="p-6">
+          <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="text-base font-semibold text-gray-900">
               {submission ? "Your submission" : "Submit your answer"}
             </h2>
 
             {submission && (
-              <p className="flex items-center gap-2 text-xs text-slate-500">
+              <p className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
                 <LateBadge isLate={submission.isLate} />
                 Submitted {formatDateTime(submission.submittedAt)}
                 {submission.updatedAt && ` · edited ${formatDateTime(submission.updatedAt)}`}
@@ -173,16 +227,14 @@ export default function StudentAssignmentDetailPage() {
           />
 
           {submission && (assignment.isOverdue || submission.status === "Graded") && (
-            <div className="mt-4 border-t border-slate-100 pt-4">
-              <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                Your answer
-              </h3>
-              <p className="mt-1 whitespace-pre-wrap wrap-break-word text-sm text-slate-800">
+            <div className="mt-6 border-t border-gray-100 pt-6">
+              <CardLabel as="h3">Your answer</CardLabel>
+              <p className="mt-2 whitespace-pre-wrap wrap-break-word border-l-2 border-gray-200 pl-4 text-sm leading-relaxed text-gray-700">
                 {submission.answerText}
               </p>
             </div>
           )}
-        </section>
+        </Card>
       </div>
     </>
   );

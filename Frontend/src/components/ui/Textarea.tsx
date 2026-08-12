@@ -2,7 +2,9 @@
 
 import { useId } from "react";
 import type { ComponentPropsWithRef } from "react";
+import { AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { FIELD_BASE, FIELD_TONE } from "@/components/ui/Input";
 
 // ComponentPropsWithRef so React Hook Form's register() can be spread straight in — see the note in
 // Input.tsx.
@@ -34,19 +36,19 @@ export function Textarea({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline justify-between gap-2">
-        <label htmlFor={id} className="text-sm font-medium text-slate-700">
+        <label htmlFor={id} className="text-sm font-semibold text-gray-700">
           {label}
           {rest.required && (
-            <span aria-hidden="true" className="ml-0.5 text-red-600">
+            <span aria-hidden="true" className="ml-0.5 text-red-500">
               *
             </span>
           )}
         </label>
 
         {showCount && maxLength !== undefined && (
-          <span
-            className={cn("text-xs tabular-nums", atLimit ? "text-red-600" : "text-slate-500")}
-          >
+          // gray-400 until it matters: a counter that is always dark competes with the label for
+          // attention while saying nothing useful at 12 of 5000 characters.
+          <span className={cn("text-xs tabular-nums", atLimit ? "text-red-500" : "text-gray-400")}>
             {length} / {maxLength}
           </span>
         )}
@@ -60,23 +62,23 @@ export function Textarea({
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
         className={cn(
-          "resize-y rounded-md border px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400",
-          "focus:outline-2 focus:outline-offset-0",
-          error
-            ? "border-red-400 focus:outline-red-500"
-            : "border-slate-300 focus:outline-slate-400",
-          "disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500",
+          FIELD_BASE,
+          error ? FIELD_TONE.error : FIELD_TONE.normal,
+          // Generous by default and still resizable. A cramped textarea makes people write less, which
+          // is the wrong incentive for an answer box and for teacher feedback alike.
+          "min-h-30 resize-y py-2.5 leading-relaxed",
           className,
         )}
         {...rest}
       />
 
       {error ? (
-        <p id={`${id}-error`} className="text-xs text-red-600">
-          {error}
+        <p id={`${id}-error`} className="flex items-start gap-1.5 text-sm text-red-500">
+          <AlertCircle aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
+          <span>{error}</span>
         </p>
       ) : hint ? (
-        <p id={`${id}-hint`} className="text-xs text-slate-500">
+        <p id={`${id}-hint`} className="text-xs text-gray-500">
           {hint}
         </p>
       ) : null}

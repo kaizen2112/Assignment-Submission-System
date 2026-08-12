@@ -1,20 +1,16 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import Link from "next/link";
+import { BookOpen } from "lucide-react";
+import { AssignmentCard } from "@/components/student/AssignmentCard";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Alert } from "@/components/ui/Alert";
-import { Badge, OverdueBadge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Pagination } from "@/components/ui/Pagination";
-import { TableSkeleton, TBody, TD, TH, THead, TR, TableWrap } from "@/components/ui/Table";
+import { CardSkeleton, SkeletonRegion } from "@/components/ui/Skeleton";
 import { useAsync } from "@/hooks/useAsync";
 import { listAssignments } from "@/lib/assignments";
-import { formatDateTime, formatRelative } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZE } from "@/types/api";
-
-const COLUMNS = 5;
 
 export default function StudentAssignmentsPage() {
   const [page, setPage] = useState(1);
@@ -38,76 +34,41 @@ export default function StudentAssignmentsPage() {
       <PageHeader
         title="Assignments"
         subtitle="Everything published for your classes, soonest deadline first."
+        crumbs={[{ label: "Student" }, { label: "Assignments" }]}
       />
 
-      {error && <Alert className="mb-4">{error}</Alert>}
+      {error && <Alert className="mb-6">{error}</Alert>}
 
-      {!loading && !error && data?.items.length === 0 ? (
+      {/* Cards, not a table. A student has a handful of assignments and a decision to make about each
+          one; a table optimises for comparing many rows, which is the teacher's problem.
+
+          This page does NOT fetch each assignment's submission state — that would be one request per
+          card. The dashboard does it once and shows status chips there; here the deadline is the signal,
+          and the status appears when you open one. */}
+      {loading ? (
+        <SkeletonRegion label="Loading assignments" className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+          <CardSkeleton />
+        </SkeletonRegion>
+      ) : !error && data?.items.length === 0 ? (
         <EmptyState
+          icon={<BookOpen />}
           title="No assignments yet"
           description="Nothing has been published for your classes. Check back later."
         />
       ) : (
-        <div className="flex flex-col gap-3">
-          <TableWrap>
-            <THead>
-              <TR>
-                <TH>Title</TH>
-                <TH>Class / Subject</TH>
-                <TH>Deadline</TH>
-                <TH align="right">Max marks</TH>
-                <TH align="right">Actions</TH>
-              </TR>
-            </THead>
-
-            {loading ? (
-              <TableSkeleton columns={COLUMNS} />
-            ) : (
-              <TBody>
-                {data?.items.map((assignment) => (
-                  <TR key={assignment.id}>
-                    <TD className="font-medium text-slate-900">{assignment.title}</TD>
-
-                    <TD>
-                      <span className="block">{assignment.className}</span>
-                      <span className="block text-xs text-slate-500">{assignment.subjectName}</span>
-                    </TD>
-
-                    <TD className="whitespace-nowrap">
-                      <span className="block">{formatDateTime(assignment.deadline)}</span>
-                      {/* The countdown, via Intl.RelativeTimeFormat: "in 3 days" / "2 days ago". More
-                          use to a student than the timestamp alone, and it localises for free. */}
-                      <span className="block text-xs text-slate-500">
-                        {formatRelative(assignment.deadline)}
-                      </span>
-                    </TD>
-
-                    <TD align="right" className="tabular-nums">
-                      {assignment.maxMarks}
-                    </TD>
-
-                    <TD align="right">
-                      <div className="flex items-center justify-end gap-1.5 whitespace-nowrap">
-                        <OverdueBadge isOverdue={assignment.isOverdue} />
-
-                        {/* Overdue plus late-allowed is the one case where a student can still act, so
-                            it is called out rather than left for them to discover by clicking. */}
-                        {assignment.isOverdue && assignment.allowLateSubmission && (
-                          <Badge tone="warning">Late OK</Badge>
-                        )}
-
-                        <Link href={`/student/assignments/${assignment.id}`}>
-                          <Button size="sm" variant="secondary">
-                            Open
-                          </Button>
-                        </Link>
-                      </div>
-                    </TD>
-                  </TR>
-                ))}
-              </TBody>
-            )}
-          </TableWrap>
+        <div className="flex flex-col gap-6">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {data?.items.map((assignment) => (
+              // `submission` deliberately omitted, not passed as null: undefined means "not known", so
+              // the card renders no status chip rather than labelling submitted work "Not submitted".
+              <AssignmentCard key={assignment.id} assignment={assignment} />
+            ))}
+          </div>
 
           {data && <Pagination result={data} onPageChange={setPage} disabled={loading} />}
         </div>

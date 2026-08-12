@@ -1,5 +1,6 @@
 "use client";
 
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import type { PagedResult } from "@/types/api";
 
@@ -24,26 +25,27 @@ export function Pagination({ result, onPageChange, disabled = false }: Paginatio
   return (
     <nav
       aria-label="Pagination"
-      className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-3"
+      className="flex flex-wrap items-center justify-between gap-3 px-1"
     >
       {/* aria-live so a screen reader announces the new range after the page changes. */}
-      <p aria-live="polite" className="text-xs text-slate-600">
-        Showing <span className="font-medium tabular-nums">{firstOnPage}</span>–
-        <span className="font-medium tabular-nums">{lastOnPage}</span> of{" "}
-        <span className="font-medium tabular-nums">{totalCount}</span>
+      <p aria-live="polite" className="text-xs text-gray-500">
+        Showing <span className="font-medium tabular-nums text-gray-700">{firstOnPage}</span>–
+        <span className="font-medium tabular-nums text-gray-700">{lastOnPage}</span> of{" "}
+        <span className="font-medium tabular-nums text-gray-700">{totalCount}</span>
       </p>
 
       <div className="flex items-center gap-2">
         <Button
           size="sm"
           variant="secondary"
+          icon={<ChevronLeft />}
           disabled={disabled || page <= 1}
           onClick={() => onPageChange(page - 1)}
         >
           Previous
         </Button>
 
-        <span className="text-xs text-slate-600 tabular-nums">
+        <span className="px-1 text-xs tabular-nums text-gray-500">
           Page {page} of {totalPages}
         </span>
 
@@ -54,6 +56,7 @@ export function Pagination({ result, onPageChange, disabled = false }: Paginatio
           onClick={() => onPageChange(page + 1)}
         >
           Next
+          <ChevronRight aria-hidden="true" className="size-4 shrink-0" />
         </Button>
       </div>
     </nav>

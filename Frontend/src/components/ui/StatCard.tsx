@@ -1,41 +1,66 @@
+import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { StatCardSkeleton } from "@/components/ui/Skeleton";
 
 // A server component — a number in a box has no interactivity.
+//
+// The icon sits in a tinted square rather than floating loose: it gives the card a fixed anchor point on
+// the left so a row of cards scans as a row, however different the numbers are in width.
+
+type StatTone = "accent" | "amber" | "green" | "blue" | "gray";
+
+const TONES: Record<StatTone, string> = {
+  accent: "bg-indigo-50 text-indigo-600",
+  amber: "bg-amber-50 text-amber-600",
+  green: "bg-green-50 text-green-600",
+  blue: "bg-blue-50 text-blue-600",
+  gray: "bg-gray-100 text-gray-500",
+};
 
 interface StatCardProps {
   label: string;
   // null means "loaded, but this number could not be determined", which is different from 0 and from
   // still loading. Rendered as an em dash rather than a misleading zero.
   value: number | null;
+  icon: ReactNode;
+  tone?: StatTone;
   hint?: string;
   loading?: boolean;
-  emphasis?: boolean;
 }
 
-export function StatCard({ label, value, hint, loading = false, emphasis = false }: StatCardProps) {
-  return (
-    <div
-      className={cn(
-        "rounded-lg border bg-white p-4",
-        emphasis ? "border-slate-300 ring-1 ring-slate-200" : "border-slate-200",
-      )}
-    >
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
+export function StatCard({
+  label,
+  value,
+  icon,
+  tone = "gray",
+  hint,
+  loading = false,
+}: StatCardProps) {
+  // The skeleton is the same shape as the real card, so a dashboard does not reflow when the numbers
+  // arrive.
+  if (loading) return <StatCardSkeleton />;
 
-      {loading ? (
-        // A fixed-height bar, so the card does not resize when the real number arrives.
-        <div
-          aria-hidden="true"
-          className="mt-2 h-8 w-12 animate-pulse rounded bg-slate-200"
-        />
-      ) : (
-        // tabular-nums so a column of these does not jitter as digits change width.
-        <p className="mt-1 text-3xl font-semibold tabular-nums text-slate-900">
+  return (
+    <div className="flex items-start gap-4 rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+      <span
+        aria-hidden="true"
+        className={cn(
+          "flex size-10 shrink-0 items-center justify-center rounded-lg",
+          "[&>svg]:size-5",
+          TONES[tone],
+        )}
+      >
+        {icon}
+      </span>
+
+      <div className="min-w-0">
+        {/* tabular-nums so a row of these does not jitter as digits change width. */}
+        <p className="text-2xl font-bold tabular-nums text-gray-900">
           {value === null ? "—" : value}
         </p>
-      )}
-
-      {hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
+        <p className="mt-0.5 text-sm text-gray-500">{label}</p>
+        {hint && <p className="mt-1 text-xs text-gray-400">{hint}</p>}
+      </div>
     </div>
   );
 }

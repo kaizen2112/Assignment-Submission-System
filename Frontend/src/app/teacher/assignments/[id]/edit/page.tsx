@@ -5,11 +5,14 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Lock, Save, Upload } from "lucide-react";
 import { AssignmentFields } from "@/components/teacher/AssignmentFields";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Alert } from "@/components/ui/Alert";
 import { AssignmentStatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { FormActions, FormCard } from "@/components/ui/Card";
+import { Skeleton, SkeletonRegion } from "@/components/ui/Skeleton";
 import { useAsync } from "@/hooks/useAsync";
 import { ApiError } from "@/lib/api";
 import { getAssignment, publishAssignment, updateAssignment } from "@/lib/assignments";
@@ -119,9 +122,17 @@ export default function EditAssignmentPage() {
     return (
       <>
         <PageHeader title="Edit assignment" backHref="/teacher/assignments" backLabel="Assignments" />
-        <p role="status" className="text-sm text-slate-500">
-          Loading…
-        </p>
+        <SkeletonRegion label="Loading assignment" className="max-w-2xl space-y-6">
+          <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+            <Skeleton className="mb-5 h-3 w-32" />
+            <Skeleton className="mb-4 h-10 w-full rounded-lg" />
+            <Skeleton className="mb-4 h-32 w-full rounded-lg" />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Skeleton className="h-10 w-full rounded-lg" />
+              <Skeleton className="h-10 w-full rounded-lg" />
+            </div>
+          </div>
+        </SkeletonRegion>
       </>
     );
   }
@@ -132,7 +143,7 @@ export default function EditAssignmentPage() {
     return (
       <>
         <PageHeader title="Edit assignment" backHref="/teacher/assignments" backLabel="Assignments" />
-        <Alert className="mb-4">{loadError ?? "This assignment could not be loaded."}</Alert>
+        <Alert className="mb-6">{loadError ?? "This assignment could not be loaded."}</Alert>
         <Link href="/teacher/assignments">
           <Button variant="secondary">Back to assignments</Button>
         </Link>
@@ -147,15 +158,19 @@ export default function EditAssignmentPage() {
         subtitle={`${assignment.className} — ${assignment.subjectName}`}
         backHref="/teacher/assignments"
         backLabel="Assignments"
+        crumbs={[
+          { label: "Assignments", href: "/teacher/assignments" },
+          { label: assignment.title },
+        ]}
         action={<AssignmentStatusBadge status={assignment.status} />}
       />
 
-      {formError && <Alert className="mb-4">{formError}</Alert>}
+      {formError && <Alert className="mb-6">{formError}</Alert>}
 
       {/* Editing a published assignment changes what students already see, which is worth saying out
           loud. It is allowed — the API permits it — but it should not be a surprise. */}
       {assignment.status === "Published" && (
-        <Alert tone="info" className="mb-4">
+        <Alert tone="info" className="mb-6">
           This assignment is published. Changes take effect for students immediately.
         </Alert>
       )}
@@ -164,22 +179,32 @@ export default function EditAssignmentPage() {
         <form
           onSubmit={handleSubmit(onSubmit)}
           noValidate
-          className="flex max-w-2xl flex-col gap-4 rounded-lg border border-slate-200 bg-white p-6"
+          className="flex max-w-2xl flex-col gap-6"
         >
-          {/* Class and subject are fixed for the life of the assignment, so they are shown, not edited. */}
-          <div className="rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-600">
-            Class and subject cannot be changed after creation.
-          </div>
+          <FormCard label="Assignment details">
+            {/* Class and subject are fixed for the life of the assignment, so they are shown, not
+                edited. A padlock says "cannot" more immediately than a sentence does. */}
+            <p className="flex items-center gap-2 rounded-lg bg-gray-50 px-4 py-3 text-xs text-gray-500">
+              <Lock aria-hidden="true" className="size-3.5 shrink-0" />
+              {assignment.className} · {assignment.subjectName} — cannot be changed after creation.
+            </p>
 
-          <AssignmentFields />
+            <AssignmentFields />
+          </FormCard>
 
-          <div className="mt-2 flex flex-wrap gap-2">
-            <Button type="submit" loading={isSubmitting}>
+          <FormActions>
+            <Button type="submit" icon={<Save />} loading={isSubmitting}>
               Save changes
             </Button>
 
             {assignment.status === "Draft" && (
-              <Button type="button" variant="secondary" loading={publishing} onClick={handlePublish}>
+              <Button
+                type="button"
+                variant="secondary"
+                icon={<Upload />}
+                loading={publishing}
+                onClick={handlePublish}
+              >
                 Publish
               </Button>
             )}
@@ -189,7 +214,7 @@ export default function EditAssignmentPage() {
                 Cancel
               </Button>
             </Link>
-          </div>
+          </FormActions>
         </form>
       </FormProvider>
     </>

@@ -90,12 +90,17 @@ a dropdown.
 
 - [ ] **Do:** In Tab A, sign in with `admin@school.com` / `Admin@123`.
 
-**Expect:** you land on `/admin/dashboard`, greeted as **System Admin**, with six stat cards reading
-**6 users, 2 teachers, 3 students, 2 classes, 3 assignments, 3 submissions**.
+**Expect:** you land on `/admin/dashboard`, greeted as **System Admin**, with four stat cards reading
+**6 users** (subtitled *2 teachers · 3 students*), **2 classes**, **3 subjects** and **3 assignments**.
 
-- [ ] The sidebar shows five entries: **Dashboard, Users, Classes, All assignments, All submissions**.
-- [ ] Below the stats, a **Setting up** panel lists the three steps in dependency order. That order is
-      not decoration — it is the order the business rules require, and Part 1 follows it.
+- [ ] The sidebar is dark and shows five entries: **Dashboard, Users, Classes, All assignments, All
+      submissions**. The current page carries an indigo left border.
+- [ ] Your role appears as a **purple `Admin` pill** in the top bar, beside your initials. Teacher is
+      indigo and Student is teal — one glance tells you which session a tab is in, which matters from
+      Part 3 onward when you have two open.
+- [ ] Below the quick actions, a **Recent activity** panel lists the newest submissions system-wide, and a
+      **Setting up** panel lists the three steps in dependency order. That order is not decoration — it is
+      the order the business rules require, and Part 1 follows it.
 
 > The **Assignments** card says *"Includes every teacher's drafts"*. Admin is the only role for which
 > that is true; hold on to it for step 1.9.
@@ -204,7 +209,11 @@ This is the row that **rule 3** checks on every student read.
 
 ### 1.8 Reset a password
 
-- [ ] **Do:** **Users** → search `mina` → **Edit**.
+- [ ] **Do:** **Users** → search `mina` → the **pencil** icon at the end of her row.
+
+> Row actions across the app are **icon buttons**, revealed when you hover the row. Each one has a
+> tooltip and an `aria-label`, so hovering tells you what it does and a screen reader is not left with an
+> unlabelled button. On a touch screen they are always visible — hover does not exist there.
 
 **Expect:** the form is pre-filled with Mina's name, email and role. **New password** is **blank**,
 with the placeholder *"Leave blank to keep the current password"*.
@@ -267,7 +276,12 @@ paying off:** Rafiq has exactly one class + subject pair, and the UI will offer 
 
 - [ ] You land on **`/teacher/dashboard`**.
 - [ ] The heading reads **"Welcome back, Rafiq Hasan"**.
-- [ ] Four stat cards. All counts are **0** — he is brand new.
+- [ ] **Three** stat cards — *Awaiting grading*, *My assignments*, *Drafts* — all **0**, because he is
+      brand new. Three rather than four on purpose: awaiting-grading is the number a teacher opens this
+      page for, and the draft/published split is one fact rather than two.
+- [ ] Two empty panels below them, each with an icon and a sentence that says what to do next rather than
+      an empty box.
+- [ ] An indigo **`Teacher`** pill in the top bar.
 - [ ] The sidebar shows **Dashboard** and **Assignments** only. No admin links.
 
 ### 2.2 Client-side validation runs before the API is touched
@@ -316,12 +330,12 @@ Answer all three questions. Show your working.
 
 - [ ] You are returned to the assignments list.
 - [ ] One row: `Newton's Laws Worksheet`, `Class 9 - A`, `Physics`, deadline, and a **`Draft`** badge.
-- [ ] Row actions are **Edit**, **Publish**, **Delete** — there is **no Submissions link**, because a
-      draft cannot have any.
+- [ ] Hover the row. Row actions are **Edit** (pencil), **Publish** (up-arrow) and **Delete** (bin) —
+      there is **no View submissions** action, because a draft cannot have any.
 
 ### 2.5 Edit it
 
-- [ ] **Do:** Click **Edit**. Change **Max marks** to `30`. Save.
+- [ ] **Do:** Click the **pencil**. Change **Max marks** to `30`. Save.
 - [ ] **Expect:** the list shows the change. Note that **Class and subject are not editable** on this
       form (A12) — moving an assignment would re-scope it under students who may already have
       submitted.
@@ -357,6 +371,8 @@ separate session, not a mutated one.
 **Expect:**
 
 - [ ] You land on **`/student/dashboard`**, heading **"Welcome back, Mina Chowdhury"**.
+- [ ] Four stat cards — *To do*, *Assignments*, *Submitted*, *Graded* — and a teal **`Student`** pill in
+      the top bar.
 - [ ] The sidebar shows **Dashboard**, **Assignments**, **My submissions**.
 
 ### 3.2 See the assignment
@@ -365,14 +381,20 @@ separate session, not a mutated one.
 
 **Expect:**
 
-- [ ] One row: `Newton's Laws Worksheet`, `Class 9 - A`, `Physics`.
-- [ ] A **deadline countdown** in words — e.g. *"in about 1 month"* — not a raw timestamp.
-- [ ] Status shows **`Open`**.
-- [ ] Max marks shows **30** (your edit from 2.5 is visible to the student).
+- [ ] One **card** — not a table row. A student has a handful of assignments and a decision to make about
+      each one; a table optimises for comparing many rows, which is the teacher's problem.
+- [ ] A `Physics` subject chip, the title `Newton's Laws Worksheet`, and `Class 9 - A · 30 marks`
+      (your **Max marks** edit from 2.5 is visible to the student).
+- [ ] A **deadline in words**, coloured by how much it matters: grey `Due <date>` when it is far off,
+      amber *"Due in 5 days"* inside a week, a red pill *"Due today"* / *"Due tomorrow"*, and a
+      struck-through date with **Closed** once it has passed. The thresholds live in one place
+      (`deadlineUrgency`) so a card and a table cell cannot disagree.
+- [ ] **No status chip.** This page does not fetch submission state — that would be one request per card
+      — so it shows nothing rather than guessing. The dashboard fetches it once and shows it there.
 
 ### 3.3 Open it
 
-- [ ] **Do:** Click **Open**.
+- [ ] **Do:** Click the card (the whole tile is the link, not just the **View** arrow).
 
 **Expect:** the full description including all three numbered questions, the deadline, max marks, and
 a submission form below with a **Your answer** textarea and a **Submit answer** button.
@@ -437,12 +459,14 @@ Switch back to the Rafiq session.
 
 ### 4.1 Find the submission
 
-- [ ] **Do:** **Assignments** → **Submissions** on the `Newton's Laws Worksheet` row.
+- [ ] **Do:** **Assignments** → hover the `Newton's Laws Worksheet` row → the **paper-plane**
+      (*View submissions*) icon. It appeared only after 2.6 published the assignment.
 
 **Expect:**
 
 - [ ] One row: **Mina Chowdhury**, submitted-at timestamp, status **`Submitted`**, marks **—**.
-- [ ] A **Grade** link.
+- [ ] A full **Grade** button, not a hover icon — grading is the reason this page exists, so the primary
+      action is not hidden. Already-graded rows get the quiet **eye** icon instead.
 
 ### 4.2 The grading screen
 
@@ -450,10 +474,19 @@ Switch back to the Rafiq session.
 
 **Expect:**
 
-- [ ] The student's full answer is displayed, **including your 3.6 correction** — the teacher grades
-      the latest version.
-- [ ] A **Marks (out of 30)** input — the label carries this assignment's own maximum.
-- [ ] A **Feedback** textarea and a **Save grade** button.
+- [ ] **Mina Chowdhury** is the page title, with the assignment name beneath it — this screen is about one
+      person's work, and the assignment is context for it rather than the other way round. Her status chip
+      sits in the header, and the breadcrumb reads *Assignments › Submissions › Mina Chowdhury*.
+- [ ] Her full answer is displayed in the left card, **including your 3.6 correction** — the teacher grades
+      the latest version. It sits behind a left rule, so it reads as a quotation of someone else's writing
+      rather than as more of the app's own text.
+- [ ] A large **Marks** input with **`/ 30`** inside the field — this assignment's own maximum, not a
+      hard-coded 100 — and a coloured bar beneath it that moves as you type
+      (red *Weak* → amber *Borderline* → green *Strong*). The bar is **decoration only**; the bound is
+      enforced by Zod and again by the server.
+- [ ] A **Feedback** textarea with a character counter, and a **Save grade** button.
+- [ ] **Do:** Scroll the answer. → **Expect:** the grade card stays put — it is sticky, so a long answer
+      never scrolls the marks box off screen.
 
 ### 4.3 Marks are bounded — client side
 
@@ -477,14 +510,15 @@ say explicitly which body the force acts on. Well organised.
 
 - [ ] You return to the submissions list.
 - [ ] The row now reads **`26 / 30`** and status **`Graded`**.
-- [ ] The action link changes from **Grade** to **Review**.
+- [ ] The full **Grade** button is replaced by a hover-revealed **eye** icon (*Review grade*) — the row is
+      done, so its action steps back.
 
 ### 4.5 The teacher can correct a mark
 
-- [ ] **Do:** Click **Review**.
-- [ ] **Expect:** the form is pre-filled with `26` and your feedback, and the button now says **Update
-      grade** rather than *Save grade*. `Graded → Graded` is an allowed transition precisely so a
-      mistyped mark can be fixed.
+- [ ] **Do:** Hover the row and click the **eye** icon.
+- [ ] **Expect:** the form is pre-filled with `26` and your feedback, the card says *"Currently 26 / 30,
+      graded … Saving again replaces it."*, and the button now says **Update grade** rather than *Save
+      grade*. `Graded → Graded` is an allowed transition precisely so a mistyped mark can be fixed.
 - [ ] **Do:** Leave it as is and go back.
 
 ### 4.6 The student sees the result
@@ -496,7 +530,7 @@ Switch to Mina's session.
 **Expect:**
 
 - [ ] Status **`Graded`**, marks **`26 / 30`**, and your feedback text visible in the row.
-- [ ] **Do:** Click **View** to open the assignment.
+- [ ] **Do:** Hover the row and click the **eye** icon (*View assignment*).
 - [ ] **Expect:** a **Your grade** panel showing `26 / 30`, the graded-at time, and the full feedback.
 - [ ] **Expect:** the **Update answer button is gone**, replaced by a message that the submission has
       been graded and can no longer be changed.
@@ -778,13 +812,18 @@ read-only-immediately behaviour that follows it. You cannot create an already-ov
 ### 6.2 Watch it go overdue
 
 - [ ] **Do:** As **Mina**, go to **Assignments**.
-- [ ] **Expect:** `Late Window Test` with a countdown like *"in 3 minutes"* and status **`Open`**.
+- [ ] **Expect:** a `Late Window Test` card carrying a **red `Due today` pill** — inside 24 hours the
+      deadline gets a shape as well as a colour, because this is one of the two cases where the student
+      has to act now.
 - [ ] **Do:** Wait out the deadline, then reload.
-- [ ] **Expect:** status flips to **`Overdue`**, in a visibly different colour.
+- [ ] **Expect:** the pill is gone. The date is now **struck through and labelled `Closed`** — a passed
+      deadline is a fact about the past, not an instruction — alongside an amber **`Late OK`** badge,
+      which appears only because this assignment allows late submission. Without that flag you would see
+      a red `Overdue` badge and no way in.
 
 ### 6.3 Submit late
 
-- [ ] **Do:** Click **Open**.
+- [ ] **Do:** Open the card.
 - [ ] **Expect:** the form is **still available**, with a clear warning that the deadline has passed
       and the submission will be marked late.
 - [ ] **Paste** and submit:
@@ -878,6 +917,31 @@ Seed data is small, so create some volume first — or just check the mechanics 
 - [ ] **Do:** `docker compose start api`, wait for healthy, reload.
 - [ ] **Expect:** everything works again.
 
+### 7.6 Loading and empty states
+
+- [ ] **Do:** DevTools → Network → throttle to **Slow 4G**, then reload any list page.
+- [ ] **Expect:** a **skeleton** in the shape of the content that is coming — grey table rows, grey cards
+      — never a spinner and never a blank page. The table header is already drawn, so nothing jumps when
+      the rows land.
+- [ ] **Do:** Apply a filter that matches nothing (e.g. **All assignments** → status `Draft` + a class
+      with no drafts).
+- [ ] **Expect:** an icon, a heading, and a sentence telling you what to do — *"Try clearing the
+      filters"* — rather than an empty table or a spinner that never stops. Every empty state in the app
+      distinguishes "nothing matches your filter" from "nothing exists yet".
+
+### 7.7 Mobile
+
+- [ ] **Do:** DevTools → device toolbar → **iPhone 12** (390px). Visit a dashboard, a table page, and the
+      grading screen.
+- [ ] **Expect:** the sidebar is gone, replaced by a **hamburger** in the top bar. Tapping it slides a
+      dark drawer over a dimmed backdrop; tapping a link both navigates **and** closes the drawer.
+- [ ] **Expect:** **no horizontal page scrolling anywhere.** Wide tables scroll *inside their own card*,
+      which is the point — the page body never moves sideways. (Getting this wrong is the most common
+      responsive bug: a grid item defaults to `min-width: auto`, so a card holding a table refuses to
+      shrink and pushes the whole page wide. `min-w-0` on `Section` is what prevents it.)
+- [ ] **Expect:** row action icons are **permanently visible** here, not hover-revealed — a touch screen
+      has no hover, so hiding them behind one would make them unreachable.
+
 ---
 
 ## Scorecard
@@ -917,12 +981,19 @@ or a success where you expected a block.
 
 ### Things that should feel right
 
-- [ ] Every list page shows a **loading skeleton**, then either data or a helpful empty state — never
-      a spinner that never resolves.
-- [ ] Status badges are **colour-coded** and consistent between teacher and student views.
+- [ ] Every list page shows a **loading skeleton** shaped like the content that is coming (7.6), then
+      either data or a helpful empty state — never a spinner that never resolves.
+- [ ] Status badges are **colour-coded** and consistent between teacher and student views — no two
+      statuses share a colour, and grading a late submission keeps its `Late` chip.
+- [ ] Your **role** is visible in the top bar at all times, in its own colour, so two open sessions are
+      never confused for each other.
 - [ ] Forms validate **before** any network request.
-- [ ] Deadlines display in **your local time**, and the countdown is in words.
+- [ ] Deadlines display in **your local time**, and the countdown is in words — coloured by urgency, and
+      struck through once closed.
 - [ ] Ungraded marks show **—**, never `0`.
+- [ ] Nothing scrolls sideways at 390px, and every icon-only button has a tooltip and a label (7.7).
+- [ ] Keyboard only: `Tab` reaches every control, focus is always visible as an indigo ring, and
+      hover-revealed row actions appear when focused rather than staying hidden.
 - [ ] The browser console stays clean. *One exception:* a `404` on
       `.../submissions/mine` is normal and expected — that is how "you have not submitted yet" is
       represented, and the browser logs every failed response whether or not the app treats it as an

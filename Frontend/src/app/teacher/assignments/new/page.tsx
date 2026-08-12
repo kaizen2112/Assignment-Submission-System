@@ -5,10 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { CalendarClock, Save, Upload } from "lucide-react";
 import { AssignmentFields } from "@/components/teacher/AssignmentFields";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
+import { FormActions, FormCard } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Select } from "@/components/ui/Select";
 import { useAsync } from "@/hooks/useAsync";
@@ -124,7 +126,7 @@ export default function NewAssignmentPage() {
     return (
       <>
         <PageHeader title="New assignment" backHref="/teacher/assignments" backLabel="Assignments" />
-        <Alert tone="warning" className="mb-4">
+        <Alert tone="warning" className="mb-6">
           Your assignment was saved as a <strong>draft</strong>, but publishing it failed:{" "}
           {savedAsDraftOnly} You can publish it from the assignments list.
         </Alert>
@@ -142,6 +144,7 @@ export default function NewAssignmentPage() {
       <>
         <PageHeader title="New assignment" backHref="/teacher/assignments" backLabel="Assignments" />
         <EmptyState
+          icon={<CalendarClock />}
           title="You are not assigned to any class yet"
           description="An administrator needs to assign you to a class and subject before you can create assignments."
           action={
@@ -161,10 +164,14 @@ export default function NewAssignmentPage() {
         subtitle="Saved as a draft. Students see nothing until you publish it."
         backHref="/teacher/assignments"
         backLabel="Assignments"
+        crumbs={[
+          { label: "Assignments", href: "/teacher/assignments" },
+          { label: "New" },
+        ]}
       />
 
-      {scopeError && <Alert className="mb-4">{scopeError}</Alert>}
-      {formError && <Alert className="mb-4">{formError}</Alert>}
+      {scopeError && <Alert className="mb-6">{scopeError}</Alert>}
+      {formError && <Alert className="mb-6">{formError}</Alert>}
 
       <FormProvider {...methods}>
         <form
@@ -172,37 +179,55 @@ export default function NewAssignmentPage() {
           // its own flag. onSubmit still handles Enter in a text field, defaulting to save-as-draft.
           onSubmit={handleSubmit((values) => submit(values, false))}
           noValidate
-          className="flex max-w-2xl flex-col gap-4 rounded-lg border border-slate-200 bg-white p-6"
+          className="flex max-w-2xl flex-col gap-6"
         >
-          <Select
-            label="Class and subject"
-            required
-            disabled={scopeLoading}
-            placeholder={scopeLoading ? "Loading…" : "Choose a class and subject"}
-            options={(scope?.items ?? []).map((item) => ({
-              value: scopeKey(item),
-              label: `${item.className} (${item.classCode}) — ${item.subjectName}`,
-            }))}
-            hint="Only the classes and subjects you are assigned to."
-            error={errors.teachingScopeKey?.message}
-            {...register("teachingScopeKey")}
-          />
+          <FormCard
+            label="Where it belongs"
+            description="Fixed once created — an assignment cannot move between classes."
+          >
+            {/* No skeleton here, unlike every list page: only this one field waits on a request, and the
+                rest of the form can be filled in meanwhile. Replacing it with a grey block would hide a
+                form that is already usable. The disabled state plus "Loading…" says the same thing
+                without taking the page away. */}
+            <Select
+              label="Class and subject"
+              required
+              disabled={scopeLoading}
+              placeholder={scopeLoading ? "Loading…" : "Choose a class and subject"}
+              options={(scope?.items ?? []).map((item) => ({
+                value: scopeKey(item),
+                label: `${item.className} (${item.classCode}) — ${item.subjectName}`,
+              }))}
+              hint="Only the classes and subjects you are assigned to."
+              error={errors.teachingScopeKey?.message}
+              {...register("teachingScopeKey")}
+            />
+          </FormCard>
 
-          <AssignmentFields />
+          <FormCard label="Assignment details">
+            <AssignmentFields />
+          </FormCard>
 
-          <div className="mt-2 flex flex-wrap gap-2">
-            <Button type="submit" loading={isSubmitting} variant="secondary">
-              Save as draft
-            </Button>
-
+          <FormActions>
             <Button
               type="button"
+              icon={<Upload />}
               loading={isSubmitting}
               onClick={handleSubmit((values) => submit(values, true))}
             >
               Save and publish
             </Button>
-          </div>
+
+            <Button type="submit" variant="secondary" icon={<Save />} loading={isSubmitting}>
+              Save as draft
+            </Button>
+
+            <Link href="/teacher/assignments">
+              <Button type="button" variant="ghost">
+                Cancel
+              </Button>
+            </Link>
+          </FormActions>
         </form>
       </FormProvider>
     </>

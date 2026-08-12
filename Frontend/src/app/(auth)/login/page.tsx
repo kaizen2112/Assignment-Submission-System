@@ -4,11 +4,21 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { GraduationCap, LogIn, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { dashboardPathFor, login } from "@/lib/auth";
 import { loginSchema } from "@/lib/schemas";
 import type { LoginValues } from "@/lib/schemas";
+
+// Demo credentials belong on screen for a graded submission: the evaluator should not have to open the
+// README to get in.
+const DEMO_ACCOUNTS = [
+  { role: "Admin", email: "admin@school.com", password: "Admin@123" },
+  { role: "Teacher", email: "teacher1@school.com", password: "Teacher@123" },
+  { role: "Student", email: "student1@school.com", password: "Student@123" },
+];
 
 export default function LoginPage() {
   const router = useRouter();
@@ -21,6 +31,7 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -48,11 +59,17 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="grid min-h-screen place-items-center bg-slate-50 px-4">
+    <main className="grid min-h-screen place-items-center bg-surface px-4 py-10">
       <div className="w-full max-w-sm">
-        <header className="mb-6 text-center">
-          <h1 className="text-lg font-semibold text-slate-900">Assignment System</h1>
-          <p className="mt-1 text-sm text-slate-500">Sign in to continue</p>
+        <header className="mb-8 text-center">
+          <span
+            aria-hidden="true"
+            className="mx-auto mb-4 flex size-12 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm"
+          >
+            <GraduationCap className="size-6" />
+          </span>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Assignment System</h1>
+          <p className="mt-1.5 text-sm text-gray-500">Sign in to continue</p>
         </header>
 
         <form
@@ -60,7 +77,7 @@ export default function LoginPage() {
           // noValidate hands validation to Zod. Without it the browser's own bubble fires first and
           // the user sees two different error styles for the same mistake.
           noValidate
-          className="flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-6 shadow-sm"
+          className="flex flex-col gap-5 rounded-xl border border-gray-100 bg-white p-6 shadow-sm"
         >
           <Input
             label="Email"
@@ -84,37 +101,52 @@ export default function LoginPage() {
           {/* role="alert" so the failure is announced, not merely displayed. The message comes from
               the API, which returns one sentence for both a wrong email and a wrong password. */}
           {formError && (
-            <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-xs text-red-700">
-              {formError}
+            <p
+              role="alert"
+              className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-700"
+            >
+              <XCircle aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-red-500" />
+              <span>{formError}</span>
             </p>
           )}
 
-          <Button type="submit" loading={isSubmitting} className="w-full">
+          <Button type="submit" icon={<LogIn />} loading={isSubmitting} className="w-full">
             {isSubmitting ? "Signing in…" : "Sign in"}
           </Button>
         </form>
 
-        {/* Demo credentials belong on screen for a graded submission: the evaluator should not have to
-            open the README to get in. */}
-        <section className="mt-6 rounded-lg border border-slate-200 bg-white p-4">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+        <Card className="mt-6 p-5">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400">
             Demo accounts
           </h2>
-          <dl className="mt-2 space-y-1 text-xs text-slate-600">
-            {[
-              ["Admin", "admin@school.com", "Admin@123"],
-              ["Teacher", "teacher1@school.com", "Teacher@123"],
-              ["Student", "student1@school.com", "Student@123"],
-            ].map(([role, email, password]) => (
-              <div key={role} className="flex justify-between gap-2">
-                <dt className="font-medium text-slate-700">{role}</dt>
-                <dd className="font-mono">
-                  {email} / {password}
-                </dd>
-              </div>
+
+          {/* Clickable rather than copy-and-paste. This is the first screen an evaluator sees, and
+              typing three credentials by hand is friction with no purpose. */}
+          <ul className="mt-3 flex flex-col gap-1.5">
+            {DEMO_ACCOUNTS.map((account) => (
+              <li key={account.role}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    // shouldValidate so the fields do not sit in an untouched-but-filled state where a
+                    // stale error from an earlier attempt is still showing.
+                    setValue("email", account.email, { shouldValidate: true });
+                    setValue("password", account.password, { shouldValidate: true });
+                    setFormError(null);
+                  }}
+                  className="flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left transition-colors duration-150 hover:bg-gray-50"
+                >
+                  <span className="text-sm font-medium text-gray-700">{account.role}</span>
+                  <span className="truncate font-mono text-xs text-gray-400">{account.email}</span>
+                </button>
+              </li>
             ))}
-          </dl>
-        </section>
+          </ul>
+
+          <p className="mt-3 border-t border-gray-100 pt-3 text-xs text-gray-400">
+            Click a role to fill the form. Local demo values only.
+          </p>
+        </Card>
       </div>
     </main>
   );

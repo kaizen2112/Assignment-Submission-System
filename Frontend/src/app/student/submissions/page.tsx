@@ -2,13 +2,24 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Eye, FileCheck2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Alert } from "@/components/ui/Alert";
 import { LateBadge, SubmissionStatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { IconLink, RowActions } from "@/components/ui/IconButton";
 import { Pagination } from "@/components/ui/Pagination";
-import { TableSkeleton, TBody, TD, TH, THead, TR, TableWrap } from "@/components/ui/Table";
+import {
+  TableSkeleton,
+  TBody,
+  TD,
+  TDPrimary,
+  TH,
+  THead,
+  TR,
+  TableWrap,
+} from "@/components/ui/Table";
 import { useAsync } from "@/hooks/useAsync";
 import { getMySubmissions } from "@/lib/assignments";
 import { formatDateTime, formatMarks } from "@/lib/utils";
@@ -46,18 +57,20 @@ export default function MySubmissionsPage() {
       <PageHeader
         title="My submissions"
         subtitle="Everything you have handed in, newest first, with marks once graded."
+        crumbs={[{ label: "Student" }, { label: "My submissions" }]}
       />
 
-      {error && <Alert className="mb-4">{error}</Alert>}
+      {error && <Alert className="mb-6">{error}</Alert>}
 
       {data?.approximate && (
-        <Alert tone="warning" className="mb-4">
+        <Alert tone="warning" className="mb-6">
           You have more assignments than fit in one page, so this list may not include everything.
         </Alert>
       )}
 
       {!loading && !error && all.length === 0 ? (
         <EmptyState
+          icon={<FileCheck2 />}
           title="You have not submitted anything yet"
           description="Open an assignment to write and submit your answer."
           action={
@@ -67,10 +80,10 @@ export default function MySubmissionsPage() {
           }
         />
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           <TableWrap>
             <THead>
-              <TR>
+              <TR hover={false}>
                 <TH>Assignment</TH>
                 <TH>Status</TH>
                 <TH>Submitted</TH>
@@ -86,7 +99,14 @@ export default function MySubmissionsPage() {
               <TBody>
                 {visible.map((submission) => (
                   <TR key={submission.id}>
-                    <TD className="font-medium text-slate-900">{submission.assignmentTitle}</TD>
+                    <TDPrimary>
+                      <Link
+                        href={`/student/assignments/${submission.assignmentId}`}
+                        className="transition-colors duration-150 hover:text-indigo-600"
+                      >
+                        {submission.assignmentTitle}
+                      </Link>
+                    </TDPrimary>
 
                     <TD>
                       <div className="flex flex-wrap items-center gap-1">
@@ -95,7 +115,9 @@ export default function MySubmissionsPage() {
                       </div>
                     </TD>
 
-                    <TD className="whitespace-nowrap">{formatDateTime(submission.submittedAt)}</TD>
+                    <TD className="whitespace-nowrap text-xs text-gray-500">
+                      {formatDateTime(submission.submittedAt)}
+                    </TD>
 
                     <TD align="right" className="tabular-nums">
                       {/* An em dash until graded — 0 is a real mark, so a falsy check here would show
@@ -107,20 +129,22 @@ export default function MySubmissionsPage() {
                       {submission.feedback ? (
                         // line-clamp so one long comment cannot stretch the row; the full text is on
                         // the assignment page.
-                        <span className="line-clamp-2 text-xs text-slate-600">
+                        <span className="line-clamp-2 text-xs text-gray-500">
                           {submission.feedback}
                         </span>
                       ) : (
-                        <span className="text-xs text-slate-400">—</span>
+                        <span className="text-xs text-gray-300">—</span>
                       )}
                     </TD>
 
                     <TD align="right">
-                      <Link href={`/student/assignments/${submission.assignmentId}`}>
-                        <Button size="sm" variant="secondary">
-                          View
-                        </Button>
-                      </Link>
+                      <RowActions>
+                        <IconLink
+                          href={`/student/assignments/${submission.assignmentId}`}
+                          label="View assignment"
+                          icon={<Eye />}
+                        />
+                      </RowActions>
                     </TD>
                   </TR>
                 ))}

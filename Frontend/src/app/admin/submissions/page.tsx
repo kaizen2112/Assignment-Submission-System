@@ -1,12 +1,23 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { FileCheck2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Alert } from "@/components/ui/Alert";
+import { Avatar } from "@/components/ui/Avatar";
 import { LateBadge, SubmissionStatusBadge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Pagination } from "@/components/ui/Pagination";
-import { TableSkeleton, TBody, TD, TH, THead, TR, TableWrap } from "@/components/ui/Table";
+import {
+  TableSkeleton,
+  TBody,
+  TD,
+  TDPrimary,
+  TH,
+  THead,
+  TR,
+  TableWrap,
+} from "@/components/ui/Table";
 import { useAsync } from "@/hooks/useAsync";
 import { listAllSubmissions } from "@/lib/admin";
 import { formatDateTime, formatMarks } from "@/lib/utils";
@@ -37,20 +48,22 @@ export default function AdminSubmissionsPage() {
       <PageHeader
         title="All submissions"
         subtitle="Every submission in the system, newest first."
+        crumbs={[{ label: "Admin" }, { label: "All submissions" }]}
       />
 
-      {error && <Alert className="mb-4">{error}</Alert>}
+      {error && <Alert className="mb-6">{error}</Alert>}
 
       {!loading && !error && data?.items.length === 0 ? (
         <EmptyState
+          icon={<FileCheck2 />}
           title="No submissions yet"
           description="Submissions appear here once students start handing work in against published assignments."
         />
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           <TableWrap>
             <THead>
-              <TR>
+              <TR hover={false}>
                 <TH>Student</TH>
                 <TH>Assignment</TH>
                 <TH>Status</TH>
@@ -65,9 +78,14 @@ export default function AdminSubmissionsPage() {
               <TBody>
                 {data?.items.map((submission) => (
                   <TR key={submission.id}>
-                    <TD className="font-medium text-slate-900">{submission.studentName}</TD>
+                    <TDPrimary>
+                      <span className="flex items-center gap-3">
+                        <Avatar fullName={submission.studentName} size="sm" />
+                        {submission.studentName}
+                      </span>
+                    </TDPrimary>
 
-                    <TD>{submission.assignmentTitle}</TD>
+                    <TD className="text-gray-700">{submission.assignmentTitle}</TD>
 
                     <TD>
                       <div className="flex flex-wrap items-center gap-1">
@@ -78,7 +96,9 @@ export default function AdminSubmissionsPage() {
                       </div>
                     </TD>
 
-                    <TD className="whitespace-nowrap">{formatDateTime(submission.submittedAt)}</TD>
+                    <TD className="whitespace-nowrap text-xs text-gray-500">
+                      {formatDateTime(submission.submittedAt)}
+                    </TD>
 
                     <TD align="right" className="tabular-nums">
                       {formatMarks(submission.marks, submission.maxMarks)}

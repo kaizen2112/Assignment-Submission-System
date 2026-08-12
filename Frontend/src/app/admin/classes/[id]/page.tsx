@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { Skeleton, SkeletonRegion } from "@/components/ui/Skeleton";
 import { useAsync } from "@/hooks/useAsync";
 import { findClass } from "@/lib/admin";
 
@@ -36,9 +37,15 @@ export default function ManageClassPage() {
     return (
       <>
         <PageHeader title="Manage class" backHref="/admin/classes" backLabel="Classes" />
-        <p role="status" className="text-sm text-slate-500">
-          Loading…
-        </p>
+        <SkeletonRegion label="Loading class" className="flex flex-col gap-5">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+              <Skeleton className="mb-2 h-4 w-32" />
+              <Skeleton className="mb-5 h-3 w-64" />
+              <Skeleton className="h-24 w-full rounded-lg" />
+            </div>
+          ))}
+        </SkeletonRegion>
       </>
     );
   }
@@ -47,7 +54,7 @@ export default function ManageClassPage() {
     return (
       <>
         <PageHeader title="Manage class" backHref="/admin/classes" backLabel="Classes" />
-        <Alert className="mb-4">{error ?? "This class could not be found."}</Alert>
+        <Alert className="mb-6">{error ?? "This class could not be found."}</Alert>
         <Link href="/admin/classes">
           <Button variant="secondary">Back to classes</Button>
         </Link>
@@ -62,7 +69,11 @@ export default function ManageClassPage() {
         subtitle="Set up subjects, assign teachers, and enrol students."
         backHref="/admin/classes"
         backLabel="Classes"
-        action={<Badge tone="neutral">{schoolClass.code}</Badge>}
+        crumbs={[
+          { label: "Classes", href: "/admin/classes" },
+          { label: schoolClass.code },
+        ]}
+        action={<Badge tone="accent">{schoolClass.code}</Badge>}
       />
 
       <div className="flex flex-col gap-5">

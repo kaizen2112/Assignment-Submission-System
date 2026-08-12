@@ -2,7 +2,9 @@
 
 import { useId } from "react";
 import type { ComponentPropsWithRef } from "react";
+import { AlertCircle, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { FIELD_BASE, FIELD_TONE } from "@/components/ui/Input";
 
 // ComponentPropsWithRef so React Hook Form's register() can be spread in — see the note in Input.tsx.
 interface SelectProps extends Omit<ComponentPropsWithRef<"select">, "id"> {
@@ -29,49 +31,56 @@ export function Select({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-sm font-medium text-slate-700">
+      <label htmlFor={id} className="text-sm font-semibold text-gray-700">
         {label}
         {rest.required && (
-          <span aria-hidden="true" className="ml-0.5 text-red-600">
+          <span aria-hidden="true" className="ml-0.5 text-red-500">
             *
           </span>
         )}
       </label>
 
-      <select
-        id={id}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={describedBy}
-        className={cn(
-          "rounded-md border bg-white px-3 py-2 text-sm text-slate-900",
-          "focus:outline-2 focus:outline-offset-0",
-          error
-            ? "border-red-400 focus:outline-red-500"
-            : "border-slate-300 focus:outline-slate-400",
-          "disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500",
-          className,
-        )}
-        {...rest}
-      >
-        {placeholder !== undefined && (
-          <option value="" disabled>
-            {placeholder}
-          </option>
-        )}
+      <div className="relative">
+        <select
+          id={id}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy}
+          className={cn(
+            FIELD_BASE,
+            error ? FIELD_TONE.error : FIELD_TONE.normal,
+            // appearance-none plus a drawn chevron: the native arrow is a different shape and colour in
+            // every browser, and it is the one control that would give the form away as unstyled.
+            "h-10 cursor-pointer appearance-none pr-10",
+            className,
+          )}
+          {...rest}
+        >
+          {placeholder !== undefined && (
+            <option value="" disabled>
+              {placeholder}
+            </option>
+          )}
 
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+
+        <ChevronDown
+          aria-hidden="true"
+          className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-gray-400"
+        />
+      </div>
 
       {error ? (
-        <p id={`${id}-error`} className="text-xs text-red-600">
-          {error}
+        <p id={`${id}-error`} className="flex items-start gap-1.5 text-sm text-red-500">
+          <AlertCircle aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
+          <span>{error}</span>
         </p>
       ) : hint ? (
-        <p id={`${id}-hint`} className="text-xs text-slate-500">
+        <p id={`${id}-hint`} className="text-xs text-gray-500">
           {hint}
         </p>
       ) : null}

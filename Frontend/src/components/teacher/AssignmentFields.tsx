@@ -54,46 +54,56 @@ export function AssignmentFields() {
         {...register("description")}
       />
 
-      <Input
-        label="Deadline"
-        type="datetime-local"
-        required
-        // Shown and entered in the browser's local timezone; converted to UTC on submit. See
-        // dateTimeLocalToUtcIso in lib/utils.ts for why that conversion is not optional.
-        hint="Your local time. Students see this deadline in their own timezone."
-        error={errors.deadline?.message}
-        {...register("deadline")}
-      />
+      {/* Two fields on one row: a datetime and a small number are both narrow, and stacking them wastes
+          the width a card already has. */}
+      <div className="grid gap-5 sm:grid-cols-2">
+        <Input
+          label="Deadline"
+          type="datetime-local"
+          required
+          // Shown and entered in the browser's local timezone; converted to UTC on submit. See
+          // dateTimeLocalToUtcIso in lib/utils.ts for why that conversion is not optional.
+          hint="Your local time. Students see this in their own timezone."
+          error={errors.deadline?.message}
+          {...register("deadline")}
+        />
 
-      <Input
-        label="Max marks"
-        type="number"
-        required
-        min={MIN_MARKS}
-        max={MAX_MARKS_LIMIT}
-        step={1}
-        error={errors.maxMarks?.message}
-        // valueAsNumber so Zod validates a number rather than the string a number input really returns.
-        {...register("maxMarks", { valueAsNumber: true })}
-      />
+        <Input
+          label="Max marks"
+          type="number"
+          required
+          min={MIN_MARKS}
+          max={MAX_MARKS_LIMIT}
+          step={1}
+          hint={`Between ${MIN_MARKS} and ${MAX_MARKS_LIMIT}.`}
+          error={errors.maxMarks?.message}
+          // valueAsNumber so Zod validates a number rather than the string a number input really returns.
+          {...register("maxMarks", { valueAsNumber: true })}
+        />
+      </div>
 
-      {/* Not the Input component: a checkbox needs its label beside the box, not above it.
+      {/* Not the Input component: a checkbox needs its label beside the box, not above it. Wrapped in a
+          tinted panel so it reads as a setting rather than as another text field left blank.
+
           The explanation is deliberately *outside* the <label> and attached with aria-describedby.
           Nested inside, it becomes part of the checkbox's accessible name, so a screen reader announces
           the entire sentence as the field's name instead of "Allow late submissions". */}
-      <div className="flex items-start gap-2">
+      <div className="flex items-start gap-3 rounded-lg bg-gray-50 p-4">
         <input
           id={lateSubmissionId}
           type="checkbox"
           aria-describedby={`${lateSubmissionId}-hint`}
-          className="mt-0.5 size-4 rounded border-slate-300"
+          className="mt-0.5 size-4 shrink-0 cursor-pointer rounded border-gray-300 text-indigo-600 accent-indigo-600"
           {...register("allowLateSubmission")}
         />
         <div>
-          <label htmlFor={lateSubmissionId} className="text-sm text-slate-700">
+          <label
+            htmlFor={lateSubmissionId}
+            className="cursor-pointer text-sm font-medium text-gray-700"
+          >
             Allow late submissions
           </label>
-          <p id={`${lateSubmissionId}-hint`} className="text-xs text-slate-500">
+          <p id={`${lateSubmissionId}-hint`} className="mt-0.5 text-xs text-gray-500">
             When off, the API rejects anything submitted after the deadline.
           </p>
         </div>

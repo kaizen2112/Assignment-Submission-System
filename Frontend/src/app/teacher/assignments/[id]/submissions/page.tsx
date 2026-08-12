@@ -3,19 +3,31 @@
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { Eye, Inbox, PenLine } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Alert } from "@/components/ui/Alert";
+import { Avatar } from "@/components/ui/Avatar";
 import { LateBadge, SubmissionStatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { IconLink, RowActions } from "@/components/ui/IconButton";
 import { Pagination } from "@/components/ui/Pagination";
-import { TableSkeleton, TBody, TD, TH, THead, TR, TableWrap } from "@/components/ui/Table";
+import {
+  TableSkeleton,
+  TBody,
+  TD,
+  TDPrimary,
+  TH,
+  THead,
+  TR,
+  TableWrap,
+} from "@/components/ui/Table";
 import { useAsync } from "@/hooks/useAsync";
 import { getAssignment, listSubmissions } from "@/lib/assignments";
 import { formatDateTime, formatMarks } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZE } from "@/types/api";
 
-const COLUMNS = 6;
+const COLUMNS = 5;
 
 export default function AssignmentSubmissionsPage() {
   const { id } = useParams<{ id: string }>();
@@ -46,14 +58,19 @@ export default function AssignmentSubmissionsPage() {
         }
         backHref="/teacher/assignments"
         backLabel="Assignments"
+        crumbs={[
+          { label: "Assignments", href: "/teacher/assignments" },
+          { label: assignment?.title ?? "Assignment" },
+          { label: "Submissions" },
+        ]}
       />
 
-      {assignmentError && <Alert className="mb-4">{assignmentError}</Alert>}
-      {error && <Alert className="mb-4">{error}</Alert>}
+      {assignmentError && <Alert className="mb-6">{assignmentError}</Alert>}
+      {error && <Alert className="mb-6">{error}</Alert>}
 
       {/* Counts only the current page, so it says so. Claiming a total would be wrong on page 2. */}
       {!loading && ungraded > 0 && (
-        <Alert tone="info" className="mb-4">
+        <Alert tone="info" className="mb-6">
           {ungraded} submission{ungraded === 1 ? "" : "s"} on this page still need{ungraded === 1 ? "s" : ""}{" "}
           grading.
         </Alert>
@@ -61,6 +78,7 @@ export default function AssignmentSubmissionsPage() {
 
       {!loading && !error && data?.items.length === 0 ? (
         <EmptyState
+          icon={<Inbox />}
           title="No submissions yet"
           description={
             assignment?.status === "Draft"
@@ -74,14 +92,13 @@ export default function AssignmentSubmissionsPage() {
           }
         />
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           <TableWrap>
             <THead>
-              <TR>
+              <TR hover={false}>
                 <TH>Student</TH>
                 <TH>Status</TH>
                 <TH>Submitted</TH>
-                <TH>Last updated</TH>
                 <TH align="right">Marks</TH>
                 <TH align="right">Actions</TH>
               </TR>
@@ -91,36 +108,65 @@ export default function AssignmentSubmissionsPage() {
               <TableSkeleton columns={COLUMNS} />
             ) : (
               <TBody>
-                {data?.items.map((submission) => (
-                  <TR key={submission.id}>
-                    <TD className="font-medium text-slate-900">{submission.studentName}</TD>
+                {data?.items.map((submission) => {
+                  const gradeHref = `/teacher/assignments/${id}/submissions/${submission.id}`;
+                  const isGraded = submission.status === "Graded";
 
-                    <TD>
-                      <div className="flex flex-wrap items-center gap-1">
-                        <SubmissionStatusBadge status={submission.status} />
-                        {/* Kept separate from status so grading a late submission does not erase
-                            the fact that it arrived late. */}
-                        <LateBadge isLate={submission.isLate} />
-                      </div>
-                    </TD>
+                  return (
+                    <TR key={submission.id}>
+                      <TDPrimary>
+                        <span className="flex items-center gap-3">
+                          <Avatar fullName={submission.studentName} size="sm" />
+                          <Link
+                            href={gradeHref}
+                            className="transition-colors duration-150 hover:text-indigo-600"
+                          >
+                            {submission.studentName}
+                          </Link>
+                        </span>
+                      </TDPrimary>
 
-                    <TD className="whitespace-nowrap">{formatDateTime(submission.submittedAt)}</TD>
+                      <TD>
+                        <div className="flex flex-wrap items-center gap-1">
+                          <SubmissionStatusBadge status={submission.status} />
+                          {/* Kept separate from status so grading a late submission does not erase
+                              the fact that it arrived late. */}
+                          <LateBadge isLate={submission.isLate} />
+                        </div>
+                      </TD>
 
-                    <TD className="whitespace-nowrap">{formatDateTime(submission.updatedAt)}</TD>
+                      <TD className="whitespace-nowrap text-xs text-gray-500">
+                        <span className="block">{formatDateTime(submission.submittedAt)}</span>
+                        {submission.updatedAt && (
+                          <span className="block text-gray-400">
+                            edited {formatDateTime(submission.updatedAt)}
+                          </span>
+                        )}
+                      </TD>
 
-                    <TD align="right" className="tabular-nums">
-                      {formatMarks(submission.marks, submission.maxMarks)}
-                    </TD>
+                      <TD align="right" className="tabular-nums">
+                        {formatMarks(submission.marks, submission.maxMarks)}
+                      </TD>
 
-                    <TD align="right">
-                      <Link href={`/teacher/assignments/${id}/submissions/${submission.id}`}>
-                        <Button size="sm" variant={submission.status === "Graded" ? "secondary" : "primary"}>
-                          {submission.status === "Graded" ? "Review" : "Grade"}
-                        </Button>
-                      </Link>
-                    </TD>
-                  </TR>
-                ))}
+                      <TD align="right">
+                        {/* Ungraded rows keep a full button: grading is the whole reason this page
+                            exists, so the primary action is not hidden behind a hover. Graded rows get
+                            the quiet icon, because reviewing is the exception. */}
+                        {isGraded ? (
+                          <RowActions>
+                            <IconLink href={gradeHref} label="Review grade" icon={<Eye />} />
+                          </RowActions>
+                        ) : (
+                          <Link href={gradeHref}>
+                            <Button size="sm" icon={<PenLine />}>
+                              Grade
+                            </Button>
+                          </Link>
+                        )}
+                      </TD>
+                    </TR>
+                  );
+                })}
               </TBody>
             )}
           </TableWrap>

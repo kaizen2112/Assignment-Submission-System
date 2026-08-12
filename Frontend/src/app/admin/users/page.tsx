@@ -2,32 +2,36 @@
 
 import { useCallback, useState } from "react";
 import Link from "next/link";
+import { Pencil, Search, Trash2, UserPlus, Users, X } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Alert } from "@/components/ui/Alert";
+import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { IconButton, IconLink, RowActions } from "@/components/ui/IconButton";
 import { Input } from "@/components/ui/Input";
 import { Pagination } from "@/components/ui/Pagination";
 import { Select } from "@/components/ui/Select";
-import { TableSkeleton, TBody, TD, TH, THead, TR, TableWrap } from "@/components/ui/Table";
+import {
+  TableSkeleton,
+  TBody,
+  TD,
+  TDPrimary,
+  TH,
+  THead,
+  TR,
+  TableWrap,
+} from "@/components/ui/Table";
 import { useAsync } from "@/hooks/useAsync";
 import { ApiError } from "@/lib/api";
 import { deleteUser, listUsers } from "@/lib/admin";
 import { useSession } from "@/components/layout/SessionContext";
-import { formatDate } from "@/lib/utils";
-import type { BadgeTone } from "@/lib/utils";
+import { formatDate, ROLE_TONES } from "@/lib/utils";
 import { DEFAULT_PAGE_SIZE } from "@/types/api";
 import type { AdminUser, Role } from "@/types/api";
 
 const COLUMNS = 5;
-
-// Roles read as a hierarchy on screen, so they get distinct tones rather than one neutral chip.
-const ROLE_TONES: Record<Role, BadgeTone> = {
-  Admin: "danger",
-  Teacher: "info",
-  Student: "neutral",
-};
 
 export default function AdminUsersPage() {
   // null until AppShell's /auth/me lands. Only used to mark the admin's own row, so a null frame just
@@ -93,14 +97,17 @@ export default function AdminUsersPage() {
     }
   };
 
+  const hasFilters = Boolean(appliedSearch || role);
+
   return (
     <>
       <PageHeader
         title="Users"
         subtitle="Create the accounts for teachers and students, and reset passwords."
+        crumbs={[{ label: "Admin" }, { label: "Users" }]}
         action={
           <Link href="/admin/users/new">
-            <Button>New user</Button>
+            <Button icon={<UserPlus />}>New user</Button>
           </Link>
         }
       />
@@ -113,9 +120,9 @@ export default function AdminUsersPage() {
           setAppliedSearch(search.trim());
           setPage(1);
         }}
-        className="mb-4 flex flex-wrap items-end gap-3"
+        className="mb-5 flex flex-wrap items-end gap-3"
       >
-        <div className="w-56">
+        <div className="w-full sm:w-48">
           <Select
             label="Filter by role"
             value={role}
@@ -132,7 +139,7 @@ export default function AdminUsersPage() {
           />
         </div>
 
-        <div className="w-64">
+        <div className="w-full sm:w-64">
           <Input
             label="Search"
             type="search"
@@ -142,14 +149,15 @@ export default function AdminUsersPage() {
           />
         </div>
 
-        <Button type="submit" variant="secondary">
+        <Button type="submit" variant="secondary" icon={<Search />}>
           Search
         </Button>
 
-        {(appliedSearch || role) && (
+        {hasFilters && (
           <Button
             type="button"
             variant="ghost"
+            icon={<X />}
             onClick={() => {
               setSearch("");
               setAppliedSearch("");
@@ -162,28 +170,29 @@ export default function AdminUsersPage() {
         )}
       </form>
 
-      {error && <Alert className="mb-4">{error}</Alert>}
-      {actionError && <Alert className="mb-4">{actionError}</Alert>}
+      {error && <Alert className="mb-6">{error}</Alert>}
+      {actionError && <Alert className="mb-6">{actionError}</Alert>}
 
       {!loading && !error && data?.items.length === 0 ? (
         <EmptyState
+          icon={<Users />}
           title="No users match"
           description={
-            appliedSearch || role
+            hasFilters
               ? "Try a different search term, or clear the filters."
               : "Create the first teacher or student account."
           }
           action={
             <Link href="/admin/users/new">
-              <Button>New user</Button>
+              <Button icon={<UserPlus />}>New user</Button>
             </Link>
           }
         />
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           <TableWrap>
             <THead>
-              <TR>
+              <TR hover={false}>
                 <TH>Name</TH>
                 <TH>Email</TH>
                 <TH>Role</TH>
@@ -203,38 +212,50 @@ export default function AdminUsersPage() {
 
                   return (
                     <TR key={user.id}>
-                      <TD className="font-medium text-slate-900">
-                        {user.fullName}
-                        {isSelf && <span className="ml-2 text-xs text-slate-500">(you)</span>}
-                      </TD>
+                      <TDPrimary>
+                        <span className="flex items-center gap-3">
+                          <Avatar fullName={user.fullName} size="sm" />
+                          <span className="min-w-0">
+                            <Link
+                              href={`/admin/users/${user.id}/edit`}
+                              className="transition-colors duration-150 hover:text-indigo-600"
+                            >
+                              {user.fullName}
+                            </Link>
+                            {isSelf && (
+                              <span className="ml-2 text-xs font-normal text-gray-400">(you)</span>
+                            )}
+                          </span>
+                        </span>
+                      </TDPrimary>
 
-                      <TD className="text-slate-600">{user.email}</TD>
+                      <TD className="text-gray-500">{user.email}</TD>
 
                       <TD>
                         <Badge tone={ROLE_TONES[user.role]}>{user.role}</Badge>
                       </TD>
 
-                      <TD className="whitespace-nowrap">{formatDate(user.createdAt)}</TD>
+                      <TD className="whitespace-nowrap text-xs text-gray-500">
+                        {formatDate(user.createdAt)}
+                      </TD>
 
                       <TD align="right">
-                        <div className="flex justify-end gap-1.5 whitespace-nowrap">
-                          <Link href={`/admin/users/${user.id}/edit`}>
-                            <Button size="sm" variant="secondary">
-                              Edit
-                            </Button>
-                          </Link>
+                        <RowActions>
+                          <IconLink
+                            href={`/admin/users/${user.id}/edit`}
+                            label="Edit user"
+                            icon={<Pencil />}
+                          />
 
-                          <Button
-                            size="sm"
-                            variant="danger"
+                          <IconButton
+                            label={isSelf ? "You cannot delete your own account" : "Delete user"}
+                            icon={<Trash2 />}
+                            tone="danger"
                             disabled={isSelf}
-                            title={isSelf ? "You cannot delete your own account." : undefined}
                             loading={busyId === user.id}
                             onClick={() => void handleDelete(user)}
-                          >
-                            Delete
-                          </Button>
-                        </div>
+                          />
+                        </RowActions>
                       </TD>
                     </TR>
                   );

@@ -3,12 +3,22 @@
 import { useCallback, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Plus, Users } from "lucide-react";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Pagination } from "@/components/ui/Pagination";
-import { Section } from "@/components/ui/Section";
+import { Section, SectionFooter } from "@/components/ui/Section";
 import { Select } from "@/components/ui/Select";
-import { TableSkeleton, TBody, TD, TH, THead, TR, TableWrap } from "@/components/ui/Table";
+import {
+  TableSkeleton,
+  TBody,
+  TD,
+  TDPrimary,
+  TH,
+  THead,
+  TR,
+  TableWrap,
+} from "@/components/ui/Table";
 import { useAsync } from "@/hooks/useAsync";
 import { ApiError } from "@/lib/api";
 import { assignTeacher, listAllOfRole, listClassTeachers } from "@/lib/admin";
@@ -81,13 +91,14 @@ export function ClassTeachers({ classId, subjects }: { classId: string; subjects
   return (
     <Section
       title="Teachers"
+      icon={<Users />}
       description="Each row grants one teacher one subject in this class. Nothing else lets them create assignments here."
     >
       {rosterError && <Alert className="mb-4">{rosterError}</Alert>}
       {teachersError && <Alert className="mb-4">{teachersError}</Alert>}
       {formError && <Alert className="mb-4">{formError}</Alert>}
       {success && (
-        <Alert tone="info" className="mb-4">
+        <Alert tone="success" className="mb-4">
           {success}
         </Alert>
       )}
@@ -95,12 +106,12 @@ export function ClassTeachers({ classId, subjects }: { classId: string; subjects
       {/* A class nobody teaches yet is a 200 with an empty list, not an error — so it gets a sentence
           rather than a table with one apologetic row in it. */}
       {!loading && !rosterError && roster?.items.length === 0 ? (
-        <p className="mb-4 text-sm text-slate-500">No teachers assigned to this class yet.</p>
+        <p className="text-sm text-gray-500">No teachers assigned to this class yet.</p>
       ) : (
-        <div className="mb-4 flex flex-col gap-3">
+        <div className="flex flex-col gap-4">
           <TableWrap>
             <THead>
-              <TR>
+              <TR hover={false}>
                 <TH>Teacher</TH>
                 <TH>Subject</TH>
                 <TH>Assigned</TH>
@@ -113,9 +124,9 @@ export function ClassTeachers({ classId, subjects }: { classId: string; subjects
               <TBody>
                 {roster?.items.map((row) => (
                   <TR key={row.id}>
-                    <TD className="font-medium text-slate-900">{row.teacherName}</TD>
+                    <TDPrimary>{row.teacherName}</TDPrimary>
                     <TD>{row.subjectName}</TD>
-                    <TD className="whitespace-nowrap">{formatDate(row.assignedAt)}</TD>
+                    <TD className="whitespace-nowrap text-xs text-gray-500">{formatDate(row.assignedAt)}</TD>
                   </TR>
                 ))}
               </TBody>
@@ -126,50 +137,50 @@ export function ClassTeachers({ classId, subjects }: { classId: string; subjects
         </div>
       )}
 
-      {!hasSubjects ? (
-        <p className="border-t border-slate-100 pt-4 text-sm text-slate-500">
-          Add a subject above before assigning a teacher.
-        </p>
-      ) : !hasTeachers ? (
-        <p className="border-t border-slate-100 pt-4 text-sm text-slate-500">
-          There are no teacher accounts yet. Create one under Users first.
-        </p>
-      ) : (
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          noValidate
-          className="flex flex-wrap items-start gap-3 border-t border-slate-100 pt-4"
-        >
-          <div className="w-64">
-            <Select
-              label="Teacher"
-              required
-              placeholder="Choose a teacher"
-              options={(teachers?.items ?? []).map((teacher) => ({
-                value: teacher.id,
-                label: `${teacher.fullName} (${teacher.email})`,
-              }))}
-              error={errors.teacherId?.message}
-              {...register("teacherId")}
-            />
-          </div>
+      <SectionFooter>
+        {!hasSubjects ? (
+          <p className="text-sm text-gray-500">Add a subject above before assigning a teacher.</p>
+        ) : !hasTeachers ? (
+          <p className="text-sm text-gray-500">
+            There are no teacher accounts yet. Create one under Users first.
+          </p>
+        ) : (
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            noValidate
+            className="flex flex-wrap items-start gap-3"
+          >
+            <div className="w-full sm:w-64">
+              <Select
+                label="Teacher"
+                required
+                placeholder="Choose a teacher"
+                options={(teachers?.items ?? []).map((teacher) => ({
+                  value: teacher.id,
+                  label: `${teacher.fullName} (${teacher.email})`,
+                }))}
+                error={errors.teacherId?.message}
+                {...register("teacherId")}
+              />
+            </div>
 
-          <div className="w-56">
-            <Select
-              label="Subject"
-              required
-              placeholder="Choose a subject"
-              options={subjects.map((subject) => ({ value: subject.id, label: subject.name }))}
-              error={errors.subjectId?.message}
-              {...register("subjectId")}
-            />
-          </div>
+            <div className="w-full sm:w-56">
+              <Select
+                label="Subject"
+                required
+                placeholder="Choose a subject"
+                options={subjects.map((subject) => ({ value: subject.id, label: subject.name }))}
+                error={errors.subjectId?.message}
+                {...register("subjectId")}
+              />
+            </div>
 
-          <Button type="submit" className="mt-6" loading={isSubmitting}>
-            Assign teacher
-          </Button>
-        </form>
-      )}
+            <Button type="submit" icon={<Plus />} className="sm:mt-7" loading={isSubmitting}>
+              Assign teacher
+            </Button>
+          </form>
+        )}
+      </SectionFooter>
     </Section>
   );
 }
