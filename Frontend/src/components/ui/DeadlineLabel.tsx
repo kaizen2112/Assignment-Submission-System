@@ -21,7 +21,12 @@ export function DeadlineLabel({
     // Struck through: the deadline is a fact about the past now, not an instruction. "Closed" says what
     // that means without the reader doing date arithmetic.
     return (
-      <span className={cn("inline-flex items-center gap-1.5 text-xs text-gray-400", className)}>
+      <span
+        className={cn(
+          "inline-flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500",
+          className,
+        )}
+      >
         <Clock aria-hidden="true" className="size-3.5 shrink-0" />
         <span className="line-through">{formatDate(deadline)}</span>
         <span className="font-medium">Closed</span>
@@ -35,8 +40,8 @@ export function DeadlineLabel({
     return (
       <span
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1",
-          "text-xs font-medium text-red-600",
+          "inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 dark:bg-red-950/40",
+          "text-xs font-medium text-red-600 dark:text-red-300",
           className,
         )}
       >
@@ -49,7 +54,10 @@ export function DeadlineLabel({
   if (urgency === "soon") {
     return (
       <span
-        className={cn("inline-flex items-center gap-1.5 text-xs font-medium text-amber-600", className)}
+        className={cn(
+          "inline-flex items-center gap-1.5 text-xs font-medium text-amber-600 dark:text-amber-400",
+          className,
+        )}
       >
         <Clock aria-hidden="true" className="size-3.5 shrink-0" />
         Due in {daysUntil(deadline)} days
@@ -59,7 +67,12 @@ export function DeadlineLabel({
 
   // Distant: the date itself is more useful than a countdown nobody is counting.
   return (
-    <span className={cn("inline-flex items-center gap-1.5 text-xs text-gray-500", className)}>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400",
+        className,
+      )}
+    >
       <Clock aria-hidden="true" className="size-3.5 shrink-0" />
       Due {formatDate(deadline)}
     </span>

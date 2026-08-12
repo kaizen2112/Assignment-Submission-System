@@ -10,18 +10,25 @@ import type { AssignmentStatus, SubmissionStatus } from "@/types/api";
 // scan rather than read, and colour is what makes that possible. The tones are tint-on-white with no
 // ring: a border around a pastel chip reads as a disabled button.
 
+// Each tone flips from tint-on-white to a translucent deep fill with a light text. The pattern is fixed:
+// `-950/40` for the fill and `-300` for the text.
+//
+// Both halves have to move. Keeping the light `-50` fill in dark mode would put a bright chip on a dark
+// table — a status is meant to be scannable, not the brightest thing on the page. Keeping the `-700`
+// text on the new dark fill would fail contrast outright. And the fill is translucent rather than solid
+// so the chip tints the surface it sits on, which is what keeps it looking attached to the row.
 const TONES: Record<BadgeTone, string> = {
-  neutral: "bg-gray-100 text-gray-600",
-  info: "bg-blue-50 text-blue-700",
-  success: "bg-green-50 text-green-700",
-  warning: "bg-amber-50 text-amber-700",
-  late: "bg-orange-50 text-orange-700",
-  danger: "bg-red-50 text-red-600",
-  accent: "bg-indigo-50 text-indigo-700",
+  neutral: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
+  info: "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300",
+  success: "bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300",
+  warning: "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
+  late: "bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300",
+  danger: "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-300",
+  accent: "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300",
 
   // Role pills only — see the note on BadgeTone. Not part of the status palette.
-  purple: "bg-purple-50 text-purple-700",
-  teal: "bg-teal-50 text-teal-700",
+  purple: "bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300",
+  teal: "bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300",
 };
 
 interface BadgeProps {

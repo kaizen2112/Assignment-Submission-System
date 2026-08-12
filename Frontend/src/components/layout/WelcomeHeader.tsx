@@ -21,10 +21,10 @@ export function WelcomeHeader({
   return (
     <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
       <div className="min-w-0">
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
           {profile ? `Welcome back, ${profile.fullName}` : "Welcome back"}
         </h1>
-        <p className="mt-1.5 text-sm text-gray-500">{subtitle}</p>
+        <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>
       </div>
 
       {action && <div className="shrink-0">{action}</div>}

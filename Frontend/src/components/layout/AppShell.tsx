@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { SessionProvider } from "@/components/layout/SessionContext";
 import { TopNav } from "@/components/layout/TopNav";
+import { PageTransition } from "@/components/ui/PageTransition";
 import { api, ApiError } from "@/lib/api";
 import { clearSession, logout } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,8 @@ import type { Role, UserProfile } from "@/types/api";
 // of what localStorage says.
 export function AppShell({ role, children }: { role: Role; children: ReactNode }) {
   const router = useRouter();
+  // Only used to key the page transition below — the sidebar reads the path itself.
+  const pathname = usePathname();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [signingOut, setSigningOut] = useState(false);
 
@@ -106,7 +109,16 @@ export function AppShell({ role, children }: { role: Role; children: ReactNode }
         <main className="lg:pl-60">
           {/* max-w-300 = 1200px. Generous padding is the point of the redesign, so it steps up rather
               than staying at a single cramped value on every screen. */}
-          <div className="mx-auto max-w-300 px-4 py-8 sm:px-6 lg:px-8">{children}</div>
+          <div className="mx-auto max-w-300 px-4 py-8 sm:px-6 lg:px-8">
+            {/* Keyed on the pathname so a navigation is a new element as far as React is concerned,
+                which is what re-runs the enter animation. Without the key the div persists across
+                routes and the transition would play once, on the first page of the session, only.
+
+                Wrapped here rather than inside each page: one place to change the timing, and no page
+                can be added later that forgets to animate. The sidebar and top bar sit outside it on
+                purpose — chrome that faded on every click would be exhausting. */}
+            <PageTransition key={pathname}>{children}</PageTransition>
+          </div>
         </main>
       </div>
     </SessionProvider>

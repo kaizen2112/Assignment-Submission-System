@@ -156,18 +156,18 @@ export default function TeacherAssignmentsPage() {
                       <TDPrimary>
                         <Link
                           href={`/teacher/assignments/${assignment.id}/edit`}
-                          className="transition-colors duration-150 hover:text-indigo-600"
+                          className="transition-colors duration-150 hover:text-indigo-600 dark:hover:text-indigo-400"
                         >
                           {assignment.title}
                         </Link>
-                        <span className="block text-xs font-normal tabular-nums text-gray-400">
+                        <span className="block text-xs font-normal tabular-nums text-gray-400 dark:text-gray-500">
                           {assignment.maxMarks} marks
                         </span>
                       </TDPrimary>
 
                       <TD>
-                        <span className="block text-gray-700">{assignment.className}</span>
-                        <span className="block text-xs text-gray-400">{assignment.subjectName}</span>
+                        <span className="block text-gray-700 dark:text-gray-300">{assignment.className}</span>
+                        <span className="block text-xs text-gray-400 dark:text-gray-500">{assignment.subjectName}</span>
                       </TD>
 
                       <TD>

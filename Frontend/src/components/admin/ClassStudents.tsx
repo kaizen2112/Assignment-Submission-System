@@ -101,7 +101,9 @@ export function ClassStudents({ classId }: { classId: string }) {
       )}
 
       {!loading && !rosterError && roster?.items.length === 0 ? (
-        <p className="text-sm text-gray-500">No students enrolled in this class yet.</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          No students enrolled in this class yet.
+        </p>
       ) : (
         <div className="flex flex-col gap-4">
           <TableWrap>
@@ -119,7 +121,9 @@ export function ClassStudents({ classId }: { classId: string }) {
                 {roster?.items.map((row) => (
                   <TR key={row.id}>
                     <TDPrimary>{row.studentName}</TDPrimary>
-                    <TD className="whitespace-nowrap text-xs text-gray-500">{formatDate(row.enrolledAt)}</TD>
+                    <TD className="whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                      {formatDate(row.enrolledAt)}
+                    </TD>
                   </TR>
                 ))}
               </TBody>
@@ -137,29 +141,29 @@ export function ClassStudents({ classId }: { classId: string }) {
             noValidate
             className="flex flex-wrap items-start gap-3"
           >
-          <div className="w-full sm:w-72">
-            <Select
-              label="Enrol a student"
-              required
-              placeholder="Choose a student"
-              // Every student account, not just the unenrolled ones: there is no endpoint that lists
-              // "students not in this class", and filtering client-side would need the whole roster
-              // rather than the page shown above. Re-enrolling someone is a 409 with a clear sentence.
-              options={(students?.items ?? []).map((student) => ({
-                value: student.id,
-                label: `${student.fullName} (${student.email})`,
-              }))}
-              error={errors.studentId?.message}
-              {...register("studentId")}
-            />
-          </div>
+            <div className="w-full sm:w-72">
+              <Select
+                label="Enrol a student"
+                required
+                placeholder="Choose a student"
+                // Every student account, not just the unenrolled ones: there is no endpoint that lists
+                // "students not in this class", and filtering client-side would need the whole roster
+                // rather than the page shown above. Re-enrolling someone is a 409 with a clear sentence.
+                options={(students?.items ?? []).map((student) => ({
+                  value: student.id,
+                  label: `${student.fullName} (${student.email})`,
+                }))}
+                error={errors.studentId?.message}
+                {...register("studentId")}
+              />
+            </div>
 
             <Button type="submit" icon={<Plus />} className="sm:mt-7" loading={isSubmitting}>
               Enrol student
             </Button>
           </form>
         ) : (
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             There are no student accounts yet. Create one under Users first.
           </p>
         )}

@@ -3,6 +3,7 @@
 import { GraduationCap, Menu } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { cn, ROLE_TONES } from "@/lib/utils";
 import type { Role, UserProfile } from "@/types/api";
 
@@ -35,7 +36,7 @@ export function TopNav({
   return (
     // z-50 so it stays above the sidebar drawer and its backdrop — the sign-out button and the menu
     // toggle must remain reachable while the drawer is open.
-    <header className="sticky top-0 z-50 h-14 border-b border-gray-200 bg-white">
+    <header className="sticky top-0 z-50 h-14 border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
       <div className="flex h-full items-center justify-between gap-4 px-4 sm:px-6">
         <div className="flex min-w-0 items-center gap-2.5">
           <button
@@ -44,7 +45,7 @@ export function TopNav({
             aria-label={menuOpen ? "Close navigation" : "Open navigation"}
             aria-expanded={menuOpen}
             aria-controls="app-sidebar"
-            className="-ml-1 flex size-8 shrink-0 items-center justify-center rounded-lg text-gray-500 transition-colors duration-150 hover:bg-gray-100 hover:text-gray-900 lg:hidden"
+            className="-ml-1 flex size-8 shrink-0 items-center justify-center rounded-lg text-gray-500 transition-colors duration-150 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100 lg:hidden"
           >
             <Menu aria-hidden="true" className="size-5" />
           </button>
@@ -58,7 +59,7 @@ export function TopNav({
 
           {/* Hidden on the narrowest screens, where the logo mark alone identifies the app and the space
               is better spent on the user's name. */}
-          <span className="hidden truncate text-sm font-semibold text-gray-900 sm:inline">
+          <span className="hidden truncate text-sm font-semibold text-gray-900 dark:text-gray-100 sm:inline">
             Assignment System
           </span>
 
@@ -66,9 +67,13 @@ export function TopNav({
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Left of the name, per the design: the theme is a property of the app, not of the account,
+              so it sits on the app side of that boundary rather than reading as a profile control. */}
+          <ThemeToggle />
+
           {profile && (
             <div className="flex items-center gap-2.5">
-              <span className="hidden max-w-40 truncate text-sm font-medium text-gray-700 sm:inline">
+              <span className="hidden max-w-40 truncate text-sm font-medium text-gray-700 dark:text-gray-200 sm:inline">
                 {profile.fullName}
               </span>
               <Avatar fullName={profile.fullName} />
@@ -82,8 +87,8 @@ export function TopNav({
             onClick={onSignOut}
             disabled={signingOut}
             className={cn(
-              "rounded-md px-2 py-1 text-sm font-medium text-gray-500",
-              "transition-colors duration-150 hover:text-gray-900",
+              "rounded-md px-2 py-1 text-sm font-medium text-gray-500 dark:text-gray-400",
+              "transition-colors duration-150 hover:text-gray-900 dark:hover:text-gray-100",
               "disabled:cursor-not-allowed disabled:opacity-50",
             )}
           >

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Badge, LateBadge, SubjectBadge, SubmissionStatusBadge } from "@/components/ui/Badge";
+import { CARD_CLASS } from "@/components/ui/Card";
 import { DeadlineLabel } from "@/components/ui/DeadlineLabel";
-import { formatMarks } from "@/lib/utils";
+import { cn, formatMarks } from "@/lib/utils";
 import type { AssignmentListItem, Submission } from "@/types/api";
 
 // One assignment as a tile. Cards rather than table rows for the student view because a student has a
@@ -31,7 +32,13 @@ export function AssignmentCard({
   return (
     <Link
       href={`/student/assignments/${assignment.id}`}
-      className="group flex flex-col rounded-xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-200 hover:border-gray-200 hover:shadow-md"
+      className={cn(
+        CARD_CLASS,
+        "group flex flex-col p-5",
+        // -translate-y-0.5 as well as the shadow: this card *is* a link, so it gets the same lift as a
+        // stat card plus the shadow that says it is above the page rather than part of it.
+        "transition-all duration-200 hover:-translate-y-0.5 hover:border-gray-200 hover:shadow-md dark:hover:border-gray-600",
+      )}
     >
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <SubjectBadge>{assignment.subjectName}</SubjectBadge>
@@ -46,16 +53,16 @@ export function AssignmentCard({
         )}
       </div>
 
-      <h3 className="font-semibold text-gray-900">{assignment.title}</h3>
+      <h3 className="font-semibold text-gray-900 dark:text-gray-100">{assignment.title}</h3>
 
-      <p className="mt-1 text-sm text-gray-500">
+      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
         {assignment.className} · {assignment.maxMarks} marks
       </p>
 
       {/* The payoff, once it exists. A student opening this dashboard after grading wants the number,
           and making them click through for it is the wrong default. */}
       {submission?.status === "Graded" && (
-        <p className="mt-3 text-sm font-semibold tabular-nums text-green-700">
+        <p className="mt-3 text-sm font-semibold tabular-nums text-green-700 dark:text-green-400">
           {formatMarks(submission.marks, submission.maxMarks)}
         </p>
       )}
@@ -79,7 +86,7 @@ export function AssignmentCard({
           )}
         </div>
 
-        <span className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-indigo-600 transition-colors duration-150 group-hover:text-indigo-700">
+        <span className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-indigo-600 transition-colors duration-150 group-hover:text-indigo-700 dark:text-indigo-400 dark:group-hover:text-indigo-300">
           View
           <ArrowRight
             aria-hidden="true"

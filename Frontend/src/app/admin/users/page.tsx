@@ -218,24 +218,24 @@ export default function AdminUsersPage() {
                           <span className="min-w-0">
                             <Link
                               href={`/admin/users/${user.id}/edit`}
-                              className="transition-colors duration-150 hover:text-indigo-600"
+                              className="transition-colors duration-150 hover:text-indigo-600 dark:hover:text-indigo-400"
                             >
                               {user.fullName}
                             </Link>
                             {isSelf && (
-                              <span className="ml-2 text-xs font-normal text-gray-400">(you)</span>
+                              <span className="ml-2 text-xs font-normal text-gray-400 dark:text-gray-500">(you)</span>
                             )}
                           </span>
                         </span>
                       </TDPrimary>
 
-                      <TD className="text-gray-500">{user.email}</TD>
+                      <TD className="text-gray-500 dark:text-gray-400">{user.email}</TD>
 
                       <TD>
                         <Badge tone={ROLE_TONES[user.role]}>{user.role}</Badge>
                       </TD>
 
-                      <TD className="whitespace-nowrap text-xs text-gray-500">
+                      <TD className="whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
                         {formatDate(user.createdAt)}
                       </TD>
 

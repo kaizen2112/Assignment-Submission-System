@@ -164,18 +164,18 @@ export default function GradeSubmissionPage() {
       <div className="grid items-start gap-6 lg:grid-cols-5">
         {/* The answer gets the wider column: it is what the teacher is actually reading. */}
         <Card as="section" aria-label="Student answer" className="lg:col-span-3">
-          <header className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-100 px-6 py-5">
+          <header className="flex flex-wrap items-start justify-between gap-3 border-b border-gray-100 dark:border-gray-700 px-6 py-5">
             <div className="flex min-w-0 items-center gap-3">
               <Avatar fullName={submission.studentName} />
               <div className="min-w-0">
-                <h2 className="truncate text-lg font-semibold text-gray-900">
+                <h2 className="truncate text-lg font-semibold text-gray-900 dark:text-gray-100">
                   {submission.studentName}
                 </h2>
-                <p className="truncate text-sm text-gray-500">{submission.assignmentTitle}</p>
+                <p className="truncate text-sm text-gray-500 dark:text-gray-400">{submission.assignmentTitle}</p>
               </div>
             </div>
 
-            <p className="flex shrink-0 items-center gap-1.5 text-xs text-gray-400">
+            <p className="flex shrink-0 items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
               <Clock aria-hidden="true" className="size-3.5" />
               {formatDateTime(submission.submittedAt)}
             </p>
@@ -183,23 +183,23 @@ export default function GradeSubmissionPage() {
 
           <div className="px-6 py-5">
             <div className="mb-3 flex items-center gap-2">
-              <FileText aria-hidden="true" className="size-3.5 text-gray-400" />
+              <FileText aria-hidden="true" className="size-3.5 text-gray-400 dark:text-gray-500" />
               <CardLabel as="h3">Answer</CardLabel>
             </div>
 
             {/* The left accent rule is what makes this read as a quotation of someone else's writing
                 rather than as more of the app's own text. */}
-            <div className="max-h-160 overflow-y-auto border-l-2 border-gray-200 pl-5">
+            <div className="max-h-160 overflow-y-auto border-l-2 border-gray-200 dark:border-gray-700 pl-5">
               {/* whitespace-pre-wrap: the answer is plain text and its line breaks are the student's
                   own. Rendering it as HTML would both lose them and invite injection. break-words stops
                   a long unbroken string from widening the whole layout. */}
-              <p className="whitespace-pre-wrap wrap-break-word text-sm leading-relaxed text-gray-700">
+              <p className="whitespace-pre-wrap wrap-break-word text-sm leading-relaxed text-gray-700 dark:text-gray-300">
                 {submission.answerText}
               </p>
             </div>
 
             {submission.updatedAt && (
-              <p className="mt-4 text-xs text-gray-400">
+              <p className="mt-4 text-xs text-gray-400 dark:text-gray-500">
                 Edited {formatDateTime(submission.updatedAt)}
               </p>
             )}
@@ -213,14 +213,14 @@ export default function GradeSubmissionPage() {
               noValidate, and threading arbitrary form props through a presentational wrapper buys
               nothing. */}
           <form onSubmit={handleSubmit(onSubmit)} noValidate className={CARD_CLASS}>
-            <header className="border-b border-gray-100 px-6 py-5">
+            <header className="border-b border-gray-100 dark:border-gray-700 px-6 py-5">
               <div className="flex items-center gap-2">
-                <PenLine aria-hidden="true" className="size-4 text-indigo-600" />
-                <h2 className="text-base font-semibold text-gray-900">Grade submission</h2>
+                <PenLine aria-hidden="true" className="size-4 text-indigo-600 dark:text-indigo-400" />
+                <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">Grade submission</h2>
               </div>
 
               {submission.status === "Graded" && (
-                <p className="mt-1.5 text-sm text-gray-500">
+                <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
                   Currently {formatMarks(submission.marks, submission.maxMarks)}, graded{" "}
                   {formatDateTime(submission.gradedAt)}. Saving again replaces it.
                 </p>

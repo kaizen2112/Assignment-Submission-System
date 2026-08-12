@@ -28,19 +28,24 @@ export function EmptyState({
     <div
       className={cn(
         "flex flex-col items-center gap-3 px-6 py-14 text-center",
-        !bare && "rounded-xl border border-dashed border-gray-200 bg-white",
+        // The dashed border stays dashed in dark mode — it is what says "this box is waiting for
+        // content" rather than "this box is content", and that reading is theme-independent.
+        !bare &&
+          "rounded-xl border border-dashed border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800",
       )}
     >
       <span
         aria-hidden="true"
-        className="flex size-12 items-center justify-center rounded-full bg-gray-50 text-gray-400 [&>svg]:size-6"
+        className="flex size-12 items-center justify-center rounded-full bg-gray-50 text-gray-400 dark:bg-gray-700 dark:text-gray-500 [&>svg]:size-6"
       >
         {icon ?? <Inbox />}
       </span>
 
       <div className="space-y-1">
-        <p className="text-sm font-semibold text-gray-900">{title}</p>
-        {description && <p className="mx-auto max-w-sm text-sm text-gray-500">{description}</p>}
+        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{title}</p>
+        {description && (
+          <p className="mx-auto max-w-sm text-sm text-gray-500 dark:text-gray-400">{description}</p>
+        )}
       </div>
 
       {action && <div className="mt-1">{action}</div>}

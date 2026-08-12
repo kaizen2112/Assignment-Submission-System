@@ -88,22 +88,31 @@ export function AssignmentFields() {
           The explanation is deliberately *outside* the <label> and attached with aria-describedby.
           Nested inside, it becomes part of the checkbox's accessible name, so a screen reader announces
           the entire sentence as the field's name instead of "Allow late submissions". */}
-      <div className="flex items-start gap-3 rounded-lg bg-gray-50 p-4">
+      {/* The tint has to go the other way in dark mode. gray-50 is a shade *down* from the white card;
+          on a gray-800 card the equivalent is a shade down from that, not up — a lighter panel here would
+          read as a raised tile rather than as an inset setting. */}
+      <div className="flex items-start gap-3 rounded-lg bg-gray-50 p-4 dark:bg-gray-900/50">
         <input
           id={lateSubmissionId}
           type="checkbox"
           aria-describedby={`${lateSubmissionId}-hint`}
-          className="mt-0.5 size-4 shrink-0 cursor-pointer rounded border-gray-300 text-indigo-600 accent-indigo-600"
+          // accent-indigo-600 is what colours the tick itself; the browser draws the rest of the control
+          // from `color-scheme`, which globals.css now sets per theme — so the empty box goes dark
+          // without any class here having to say so.
+          className="mt-0.5 size-4 shrink-0 cursor-pointer rounded border-gray-300 text-indigo-600 accent-indigo-600 dark:border-gray-600"
           {...register("allowLateSubmission")}
         />
         <div>
           <label
             htmlFor={lateSubmissionId}
-            className="cursor-pointer text-sm font-medium text-gray-700"
+            className="cursor-pointer text-sm font-medium text-gray-700 dark:text-gray-200"
           >
             Allow late submissions
           </label>
-          <p id={`${lateSubmissionId}-hint`} className="mt-0.5 text-xs text-gray-500">
+          <p
+            id={`${lateSubmissionId}-hint`}
+            className="mt-0.5 text-xs text-gray-500 dark:text-gray-400"
+          >
             When off, the API rejects anything submitted after the deadline.
           </p>
         </div>

@@ -91,7 +91,7 @@ export default function TeacherDashboardPage() {
           action={
             <Link
               href="/teacher/assignments"
-              className="text-sm font-medium text-indigo-600 transition-colors duration-150 hover:text-indigo-700"
+              className="text-sm font-medium text-indigo-600 transition-colors duration-150 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
             >
               View all
             </Link>
@@ -128,11 +128,11 @@ export default function TeacherDashboardPage() {
                     <TDPrimary>
                       <Link
                         href={`/teacher/assignments/${assignment.id}/edit`}
-                        className="transition-colors duration-150 hover:text-indigo-600"
+                        className="transition-colors duration-150 hover:text-indigo-600 dark:hover:text-indigo-400"
                       >
                         {assignment.title}
                       </Link>
-                      <span className="block text-xs font-normal text-gray-400">
+                      <span className="block text-xs font-normal text-gray-400 dark:text-gray-500">
                         {assignment.className} · {assignment.subjectName}
                       </span>
                     </TDPrimary>
@@ -191,7 +191,7 @@ export default function TeacherDashboardPage() {
                     <TDPrimary>
                       <Link
                         href={`/teacher/assignments/${assignmentId}/submissions/${submission.id}`}
-                        className="transition-colors duration-150 hover:text-indigo-600"
+                        className="transition-colors duration-150 hover:text-indigo-600 dark:hover:text-indigo-400"
                       >
                         {submission.studentName}
                       </Link>
@@ -203,7 +203,7 @@ export default function TeacherDashboardPage() {
 
                     <TD>{submission.assignmentTitle}</TD>
 
-                    <TD className="whitespace-nowrap text-xs text-gray-500">
+                    <TD className="whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
                       {formatDateTime(submission.submittedAt)}
                     </TD>
                   </TR>

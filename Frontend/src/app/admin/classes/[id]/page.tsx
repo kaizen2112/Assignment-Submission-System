@@ -10,8 +10,10 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Alert } from "@/components/ui/Alert";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { CARD_CLASS } from "@/components/ui/Card";
 import { Skeleton, SkeletonRegion } from "@/components/ui/Skeleton";
 import { useAsync } from "@/hooks/useAsync";
+import { cn } from "@/lib/utils";
 import { findClass } from "@/lib/admin";
 
 // The one screen where a class is actually set up: subjects, then the teachers who teach them, then the
@@ -39,7 +41,7 @@ export default function ManageClassPage() {
         <PageHeader title="Manage class" backHref="/admin/classes" backLabel="Classes" />
         <SkeletonRegion label="Loading class" className="flex flex-col gap-5">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+            <div key={i} className={cn(CARD_CLASS, "p-6")}>
               <Skeleton className="mb-2 h-4 w-32" />
               <Skeleton className="mb-5 h-3 w-64" />
               <Skeleton className="h-24 w-full rounded-lg" />

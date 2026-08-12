@@ -82,13 +82,13 @@ export default function StudentDashboardPage() {
       {/* --- To do ------------------------------------------------------------------------------- */}
       <section aria-labelledby="todo-heading" className="mb-10">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 id="todo-heading" className="text-base font-semibold text-gray-900">
+          <h2 id="todo-heading" className="text-base font-semibold text-gray-900 dark:text-gray-100">
             Needs your attention
           </h2>
           {outstanding.length > CARD_LIMIT && (
             <Link
               href="/student/assignments"
-              className="text-sm font-medium text-indigo-600 transition-colors duration-150 hover:text-indigo-700"
+              className="text-sm font-medium text-indigo-600 transition-colors duration-150 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
             >
               View all {outstanding.length}
             </Link>
@@ -128,12 +128,12 @@ export default function StudentDashboardPage() {
       {!loading && completed.length > 0 && (
         <section aria-labelledby="completed-heading">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 id="completed-heading" className="text-base font-semibold text-gray-900">
+            <h2 id="completed-heading" className="text-base font-semibold text-gray-900 dark:text-gray-100">
               Completed
             </h2>
             <Link
               href="/student/submissions"
-              className="text-sm font-medium text-indigo-600 transition-colors duration-150 hover:text-indigo-700"
+              className="text-sm font-medium text-indigo-600 transition-colors duration-150 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
             >
               My submissions
             </Link>

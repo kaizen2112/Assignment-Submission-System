@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { CARD_CLASS } from "@/components/ui/Card";
 
 // A titled card. Server component — the interactive parts are the forms and tables inside it.
 //
@@ -30,23 +31,23 @@ export function Section({
     // refuses to shrink below its content's min-content width — which means a Section holding a table
     // pushes the whole page wider instead of letting the table's own overflow-x-auto scroll. Without
     // this, the teacher dashboard overflowed by 56px at 390px.
-    <section
-      className={cn("min-w-0 rounded-xl border border-gray-100 bg-white shadow-sm", className)}
-    >
+    <section className={cn("min-w-0", CARD_CLASS, className)}>
       <div className="flex flex-wrap items-start justify-between gap-3 px-6 pb-4 pt-5">
         <div className="flex min-w-0 items-start gap-3">
           {icon && (
             <span
               aria-hidden="true"
-              className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 [&>svg]:size-4"
+              className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400 [&>svg]:size-4"
             >
               {icon}
             </span>
           )}
 
           <div className="min-w-0">
-            <h2 className="text-base font-semibold text-gray-900">{title}</h2>
-            {description && <p className="mt-0.5 text-sm text-gray-500">{description}</p>}
+            <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
+            {description && (
+              <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">{description}</p>
+            )}
           </div>
         </div>
 
@@ -68,6 +69,8 @@ export function SectionFooter({
   children: ReactNode;
 }) {
   return (
-    <div className={cn("mt-5 border-t border-gray-100 pt-5", className)}>{children}</div>
+    <div className={cn("mt-5 border-t border-gray-100 pt-5 dark:border-gray-700", className)}>
+      {children}
+    </div>
   );
 }

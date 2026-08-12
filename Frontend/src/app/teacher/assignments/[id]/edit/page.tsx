@@ -11,14 +11,14 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Alert } from "@/components/ui/Alert";
 import { AssignmentStatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { FormActions, FormCard } from "@/components/ui/Card";
+import { CARD_CLASS, FormActions, FormCard } from "@/components/ui/Card";
 import { Skeleton, SkeletonRegion } from "@/components/ui/Skeleton";
 import { useAsync } from "@/hooks/useAsync";
 import { ApiError } from "@/lib/api";
 import { getAssignment, publishAssignment, updateAssignment } from "@/lib/assignments";
 import { assignmentSchema } from "@/lib/schemas";
 import type { AssignmentValues } from "@/lib/schemas";
-import { dateTimeLocalToUtcIso, utcIsoToDateTimeLocal } from "@/lib/utils";
+import { cn, dateTimeLocalToUtcIso, utcIsoToDateTimeLocal } from "@/lib/utils";
 
 export default function EditAssignmentPage() {
   const router = useRouter();
@@ -123,7 +123,7 @@ export default function EditAssignmentPage() {
       <>
         <PageHeader title="Edit assignment" backHref="/teacher/assignments" backLabel="Assignments" />
         <SkeletonRegion label="Loading assignment" className="max-w-2xl space-y-6">
-          <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+          <div className={cn(CARD_CLASS, "p-6")}>
             <Skeleton className="mb-5 h-3 w-32" />
             <Skeleton className="mb-4 h-10 w-full rounded-lg" />
             <Skeleton className="mb-4 h-32 w-full rounded-lg" />
@@ -184,7 +184,7 @@ export default function EditAssignmentPage() {
           <FormCard label="Assignment details">
             {/* Class and subject are fixed for the life of the assignment, so they are shown, not
                 edited. A padlock says "cannot" more immediately than a sentence does. */}
-            <p className="flex items-center gap-2 rounded-lg bg-gray-50 px-4 py-3 text-xs text-gray-500">
+            <p className="flex items-center gap-2 rounded-lg bg-gray-50 px-4 py-3 text-xs text-gray-500 dark:bg-gray-900/50 dark:text-gray-400">
               <Lock aria-hidden="true" className="size-3.5 shrink-0" />
               {assignment.className} · {assignment.subjectName} — cannot be changed after creation.
             </p>

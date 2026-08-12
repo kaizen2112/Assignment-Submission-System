@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { CARD_CLASS } from "@/components/ui/Card";
 import { StatCardSkeleton } from "@/components/ui/Skeleton";
 
 // A server component — a number in a box has no interactivity.
@@ -10,11 +11,11 @@ import { StatCardSkeleton } from "@/components/ui/Skeleton";
 type StatTone = "accent" | "amber" | "green" | "blue" | "gray";
 
 const TONES: Record<StatTone, string> = {
-  accent: "bg-indigo-50 text-indigo-600",
-  amber: "bg-amber-50 text-amber-600",
-  green: "bg-green-50 text-green-600",
-  blue: "bg-blue-50 text-blue-600",
-  gray: "bg-gray-100 text-gray-500",
+  accent: "bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400",
+  amber: "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400",
+  green: "bg-green-50 text-green-600 dark:bg-green-950/40 dark:text-green-400",
+  blue: "bg-blue-50 text-blue-600 dark:bg-blue-950/40 dark:text-blue-400",
+  gray: "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400",
 };
 
 interface StatCardProps {
@@ -41,7 +42,16 @@ export function StatCard({
   if (loading) return <StatCardSkeleton />;
 
   return (
-    <div className="flex items-start gap-4 rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+    <div
+      className={cn(
+        CARD_CLASS,
+        "flex items-start gap-4 p-5",
+        // Lifts on hover. These cards are not clickable, so this is not a click affordance — it is the
+        // dashboard acknowledging the cursor, which is the difference between a page that feels live and
+        // a screenshot. `transition-all` is safe here because nothing about the card reflows.
+        "transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
+      )}
+    >
       <span
         aria-hidden="true"
         className={cn(
@@ -55,11 +65,11 @@ export function StatCard({
 
       <div className="min-w-0">
         {/* tabular-nums so a row of these does not jitter as digits change width. */}
-        <p className="text-2xl font-bold tabular-nums text-gray-900">
+        <p className="text-2xl font-bold tabular-nums text-gray-900 dark:text-gray-100">
           {value === null ? "—" : value}
         </p>
-        <p className="mt-0.5 text-sm text-gray-500">{label}</p>
-        {hint && <p className="mt-1 text-xs text-gray-400">{hint}</p>}
+        <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">{label}</p>
+        {hint && <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">{hint}</p>}
       </div>
     </div>
   );

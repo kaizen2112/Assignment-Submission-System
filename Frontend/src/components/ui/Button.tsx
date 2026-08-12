@@ -19,15 +19,21 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
 }
 
+// Dark mode keeps indigo-600 on the primary button rather than lightening it. It is the one saturated
+// colour in the app and it carries the same meaning on either ground — dimming it in dark mode would
+// make the main action of a screen the quietest thing on it.
 const VARIANTS: Record<Variant, string> = {
   // The one accent, reserved for the single most likely action on a screen. Two indigo buttons side by
   // side means neither is the primary one.
-  primary: "bg-indigo-600 text-white shadow-sm hover:bg-indigo-700",
-  secondary: "bg-white text-gray-700 border border-gray-300 shadow-sm hover:bg-gray-50",
+  primary: "bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 hover:shadow-md",
+  secondary:
+    "bg-white text-gray-700 border border-gray-300 shadow-sm hover:bg-gray-50 hover:shadow-md dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700",
   // Tinted rather than solid red. A solid red button draws the eye harder than the primary action,
   // which is backwards for something you mostly do not want people clicking.
-  danger: "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100",
-  ghost: "bg-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900",
+  danger:
+    "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900 dark:hover:bg-red-950/70",
+  ghost:
+    "bg-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100",
 };
 
 const SIZES: Record<Size, string> = {
@@ -58,8 +64,13 @@ export function Button({
       type={type}
       className={cn(
         "inline-flex items-center justify-center rounded-lg font-medium",
-        "transition-colors duration-150",
-        "disabled:cursor-not-allowed disabled:opacity-50",
+        // The press. `active:` fires on mouse-down and on Enter/Space, so the button dips for the
+        // keyboard too. 2% is under the threshold where it reads as the button resizing rather than as
+        // it being pushed — and because it scales about its own centre, nothing around it moves.
+        "pressable active:scale-[0.98]",
+        // Nothing to press when the button is refusing the click, so the scale is dropped along with
+        // the pointer. A control that dips and then does nothing feels broken rather than disabled.
+        "disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100",
         VARIANTS[variant],
         SIZES[size],
         className,

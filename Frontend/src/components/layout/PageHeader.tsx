@@ -36,7 +36,9 @@ export function PageHeader({
       {backHref && (
         <Link
           href={backHref}
-          className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 transition-colors duration-150 hover:text-indigo-600"
+          // w-fit so the hit area stops at the words. Without it the inline-flex would still be a block
+          // in some contexts and the link would swallow the empty width beside it.
+          className="mb-3 inline-flex w-fit items-center gap-1.5 text-sm font-medium text-gray-500 transition-colors duration-150 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400"
         >
           <ArrowLeft aria-hidden="true" className="size-4" />
           {backLabel}
@@ -45,17 +47,20 @@ export function PageHeader({
 
       {crumbs && crumbs.length > 0 && (
         <nav aria-label="Breadcrumb" className="mb-2">
-          <ol className="flex flex-wrap items-center gap-1 text-xs text-gray-400">
+          <ol className="flex flex-wrap items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
             {crumbs.map((crumb, index) => (
               <li key={`${crumb.label}-${index}`} className="flex items-center gap-1">
                 {index > 0 && (
-                  <ChevronRight aria-hidden="true" className="size-3 shrink-0 text-gray-300" />
+                  <ChevronRight
+                    aria-hidden="true"
+                    className="size-3 shrink-0 text-gray-300 dark:text-gray-600"
+                  />
                 )}
 
                 {crumb.href ? (
                   <Link
                     href={crumb.href}
-                    className="transition-colors duration-150 hover:text-gray-600"
+                    className="transition-colors duration-150 hover:text-gray-600 dark:hover:text-gray-300"
                   >
                     {crumb.label}
                   </Link>
@@ -72,8 +77,12 @@ export function PageHeader({
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">{title}</h1>
-          {subtitle && <p className="mt-1.5 text-sm text-gray-500">{subtitle}</p>}
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+            {title}
+          </h1>
+          {subtitle && (
+            <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>
+          )}
         </div>
 
         {action && <div className="shrink-0">{action}</div>}

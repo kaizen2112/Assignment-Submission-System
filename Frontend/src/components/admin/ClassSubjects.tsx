@@ -76,7 +76,9 @@ export function ClassSubjects({
       {formError && <Alert className="mb-4">{formError}</Alert>}
 
       {subjects.length === 0 ? (
-        <p className="text-sm text-gray-500">No subjects yet. Add one before assigning a teacher.</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          No subjects yet. Add one before assigning a teacher.
+        </p>
       ) : (
         <div className="flex flex-wrap gap-1.5">
           {subjects.map((subject) => (

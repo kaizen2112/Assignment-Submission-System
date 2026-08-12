@@ -10,7 +10,7 @@ import { UserFields } from "@/components/admin/UserFields";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { FormActions, FormCard } from "@/components/ui/Card";
+import { CARD_CLASS, FormActions, FormCard } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 import { Skeleton, SkeletonRegion } from "@/components/ui/Skeleton";
 import { useAsync } from "@/hooks/useAsync";
@@ -18,7 +18,7 @@ import { ApiError } from "@/lib/api";
 import { findUser, updateUser } from "@/lib/admin";
 import { PASSWORD_MAX, PASSWORD_MIN, updateUserSchema } from "@/lib/schemas";
 import type { UpdateUserValues } from "@/lib/schemas";
-import { formatDateTime } from "@/lib/utils";
+import { cn, formatDateTime } from "@/lib/utils";
 
 // newPassword maps onto the server's `newPassword`, so the same list covers both directions.
 const SERVER_FIELDS = ["fullName", "email", "role", "newPassword"] as const;
@@ -106,7 +106,7 @@ export default function EditUserPage() {
       <>
         <PageHeader title="Edit user" backHref="/admin/users" backLabel="Users" />
         <SkeletonRegion label="Loading user" className="max-w-2xl">
-          <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
+          <div className={cn(CARD_CLASS, "p-6")}>
             <Skeleton className="mb-5 h-3 w-24" />
             <Skeleton className="mb-4 h-10 w-full rounded-lg" />
             <Skeleton className="mb-4 h-10 w-full rounded-lg" />

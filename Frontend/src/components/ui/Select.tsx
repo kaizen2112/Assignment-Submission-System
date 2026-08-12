@@ -31,7 +31,7 @@ export function Select({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-sm font-semibold text-gray-700">
+      <label htmlFor={id} className="text-sm font-semibold text-gray-700 dark:text-gray-200">
         {label}
         {rest.required && (
           <span aria-hidden="true" className="ml-0.5 text-red-500">
@@ -70,17 +70,20 @@ export function Select({
 
         <ChevronDown
           aria-hidden="true"
-          className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-gray-400"
+          className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-gray-400 dark:text-gray-500"
         />
       </div>
 
       {error ? (
-        <p id={`${id}-error`} className="flex items-start gap-1.5 text-sm text-red-500">
+        <p
+          id={`${id}-error`}
+          className="flex items-start gap-1.5 text-sm text-red-500 dark:text-red-400"
+        >
           <AlertCircle aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
           <span>{error}</span>
         </p>
       ) : hint ? (
-        <p id={`${id}-hint`} className="text-xs text-gray-500">
+        <p id={`${id}-hint`} className="text-xs text-gray-500 dark:text-gray-400">
           {hint}
         </p>
       ) : null}

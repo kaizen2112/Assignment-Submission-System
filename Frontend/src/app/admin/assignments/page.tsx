@@ -135,8 +135,8 @@ export default function AdminAssignmentsPage() {
                     <TDPrimary>{assignment.title}</TDPrimary>
 
                     <TD>
-                      <span className="block text-gray-700">{assignment.className}</span>
-                      <span className="block text-xs text-gray-400">{assignment.subjectName}</span>
+                      <span className="block text-gray-700 dark:text-gray-300">{assignment.className}</span>
+                      <span className="block text-xs text-gray-400 dark:text-gray-500">{assignment.subjectName}</span>
                     </TD>
 
                     <TD>

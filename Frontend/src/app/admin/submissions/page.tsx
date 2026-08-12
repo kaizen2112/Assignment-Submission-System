@@ -85,7 +85,7 @@ export default function AdminSubmissionsPage() {
                       </span>
                     </TDPrimary>
 
-                    <TD className="text-gray-700">{submission.assignmentTitle}</TD>
+                    <TD className="text-gray-700 dark:text-gray-300">{submission.assignmentTitle}</TD>
 
                     <TD>
                       <div className="flex flex-wrap items-center gap-1">
@@ -96,7 +96,7 @@ export default function AdminSubmissionsPage() {
                       </div>
                     </TD>
 
-                    <TD className="whitespace-nowrap text-xs text-gray-500">
+                    <TD className="whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
                       {formatDateTime(submission.submittedAt)}
                     </TD>
 

@@ -106,7 +106,9 @@ export function ClassTeachers({ classId, subjects }: { classId: string; subjects
       {/* A class nobody teaches yet is a 200 with an empty list, not an error — so it gets a sentence
           rather than a table with one apologetic row in it. */}
       {!loading && !rosterError && roster?.items.length === 0 ? (
-        <p className="text-sm text-gray-500">No teachers assigned to this class yet.</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          No teachers assigned to this class yet.
+        </p>
       ) : (
         <div className="flex flex-col gap-4">
           <TableWrap>
@@ -126,7 +128,9 @@ export function ClassTeachers({ classId, subjects }: { classId: string; subjects
                   <TR key={row.id}>
                     <TDPrimary>{row.teacherName}</TDPrimary>
                     <TD>{row.subjectName}</TD>
-                    <TD className="whitespace-nowrap text-xs text-gray-500">{formatDate(row.assignedAt)}</TD>
+                    <TD className="whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
+                      {formatDate(row.assignedAt)}
+                    </TD>
                   </TR>
                 ))}
               </TBody>
@@ -139,9 +143,11 @@ export function ClassTeachers({ classId, subjects }: { classId: string; subjects
 
       <SectionFooter>
         {!hasSubjects ? (
-          <p className="text-sm text-gray-500">Add a subject above before assigning a teacher.</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Add a subject above before assigning a teacher.
+          </p>
         ) : !hasTeachers ? (
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             There are no teacher accounts yet. Create one under Users first.
           </p>
         ) : (

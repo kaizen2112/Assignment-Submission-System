@@ -6,8 +6,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { GraduationCap, LogIn, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
+import { Card, CARD_CLASS } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { cn } from "@/lib/utils";
 import { dashboardPathFor, login } from "@/lib/auth";
 import { loginSchema } from "@/lib/schemas";
 import type { LoginValues } from "@/lib/schemas";
@@ -68,8 +69,10 @@ export default function LoginPage() {
           >
             <GraduationCap className="size-6" />
           </span>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Assignment System</h1>
-          <p className="mt-1.5 text-sm text-gray-500">Sign in to continue</p>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100">
+            Assignment System
+          </h1>
+          <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">Sign in to continue</p>
         </header>
 
         <form
@@ -77,7 +80,9 @@ export default function LoginPage() {
           // noValidate hands validation to Zod. Without it the browser's own bubble fires first and
           // the user sees two different error styles for the same mistake.
           noValidate
-          className="flex flex-col gap-5 rounded-xl border border-gray-100 bg-white p-6 shadow-sm"
+          // CARD_CLASS rather than its five classes spelled out — this form is a card like any other,
+          // and copying the string is how the login page ends up the one screen that missed a theme.
+          className={cn(CARD_CLASS, "flex flex-col gap-5 p-6")}
         >
           <Input
             label="Email"
@@ -103,9 +108,12 @@ export default function LoginPage() {
           {formError && (
             <p
               role="alert"
-              className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-700"
+              className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200"
             >
-              <XCircle aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-red-500" />
+              <XCircle
+                aria-hidden="true"
+                className="mt-0.5 size-4 shrink-0 text-red-500 dark:text-red-400"
+              />
               <span>{formError}</span>
             </p>
           )}
@@ -116,7 +124,7 @@ export default function LoginPage() {
         </form>
 
         <Card className="mt-6 p-5">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
             Demo accounts
           </h2>
 
@@ -134,16 +142,24 @@ export default function LoginPage() {
                     setValue("password", account.password, { shouldValidate: true });
                     setFormError(null);
                   }}
-                  className="flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left transition-colors duration-150 hover:bg-gray-50"
+                  // -mx-3 with px-3: the hover fill bleeds out to the card's own padding edge, so it
+                  // reads as a full-width row rather than a floating pill with a gap either side. The
+                  // negative margin is what keeps the text aligned with the heading above it despite the
+                  // extra padding.
+                  className="-mx-3 flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-gray-700/50"
                 >
-                  <span className="text-sm font-medium text-gray-700">{account.role}</span>
-                  <span className="truncate font-mono text-xs text-gray-400">{account.email}</span>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                    {account.role}
+                  </span>
+                  <span className="truncate font-mono text-xs text-gray-400 dark:text-gray-500">
+                    {account.email}
+                  </span>
                 </button>
               </li>
             ))}
           </ul>
 
-          <p className="mt-3 border-t border-gray-100 pt-3 text-xs text-gray-400">
+          <p className="mt-3 border-t border-gray-100 pt-3 text-xs text-gray-400 dark:border-gray-700 dark:text-gray-500">
             Click a role to fill the form. Local demo values only.
           </p>
         </Card>

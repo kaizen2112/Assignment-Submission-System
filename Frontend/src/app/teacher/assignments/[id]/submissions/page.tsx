@@ -119,7 +119,7 @@ export default function AssignmentSubmissionsPage() {
                           <Avatar fullName={submission.studentName} size="sm" />
                           <Link
                             href={gradeHref}
-                            className="transition-colors duration-150 hover:text-indigo-600"
+                            className="transition-colors duration-150 hover:text-indigo-600 dark:hover:text-indigo-400"
                           >
                             {submission.studentName}
                           </Link>
@@ -135,10 +135,10 @@ export default function AssignmentSubmissionsPage() {
                         </div>
                       </TD>
 
-                      <TD className="whitespace-nowrap text-xs text-gray-500">
+                      <TD className="whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
                         <span className="block">{formatDateTime(submission.submittedAt)}</span>
                         {submission.updatedAt && (
-                          <span className="block text-gray-400">
+                          <span className="block text-gray-400 dark:text-gray-500">
                             edited {formatDateTime(submission.updatedAt)}
                           </span>
                         )}

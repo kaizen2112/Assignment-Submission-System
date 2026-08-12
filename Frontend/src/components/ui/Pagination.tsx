@@ -28,10 +28,19 @@ export function Pagination({ result, onPageChange, disabled = false }: Paginatio
       className="flex flex-wrap items-center justify-between gap-3 px-1"
     >
       {/* aria-live so a screen reader announces the new range after the page changes. */}
-      <p aria-live="polite" className="text-xs text-gray-500">
-        Showing <span className="font-medium tabular-nums text-gray-700">{firstOnPage}</span>–
-        <span className="font-medium tabular-nums text-gray-700">{lastOnPage}</span> of{" "}
-        <span className="font-medium tabular-nums text-gray-700">{totalCount}</span>
+      <p aria-live="polite" className="text-xs text-gray-500 dark:text-gray-400">
+        Showing{" "}
+        <span className="font-medium tabular-nums text-gray-700 dark:text-gray-200">
+          {firstOnPage}
+        </span>
+        –
+        <span className="font-medium tabular-nums text-gray-700 dark:text-gray-200">
+          {lastOnPage}
+        </span>{" "}
+        of{" "}
+        <span className="font-medium tabular-nums text-gray-700 dark:text-gray-200">
+          {totalCount}
+        </span>
       </p>
 
       <div className="flex items-center gap-2">
@@ -45,7 +54,7 @@ export function Pagination({ result, onPageChange, disabled = false }: Paginatio
           Previous
         </Button>
 
-        <span className="px-1 text-xs tabular-nums text-gray-500">
+        <span className="px-1 text-xs tabular-nums text-gray-500 dark:text-gray-400">
           Page {page} of {totalPages}
         </span>
 

@@ -13,15 +13,23 @@ import { cn } from "@/lib/utils";
 
 type Tone = "neutral" | "danger";
 
+// Both tones start from the same neutral gray and only diverge on hover — the danger action should not
+// announce itself as red until the cursor is actually on it, or every table row reads as a warning.
 const TONES: Record<Tone, string> = {
-  neutral: "text-gray-500 hover:bg-gray-100 hover:text-gray-900",
-  danger: "text-gray-500 hover:bg-red-50 hover:text-red-600",
+  neutral:
+    "text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-100",
+  danger:
+    "text-gray-500 hover:bg-red-50 hover:text-red-600 dark:text-gray-400 dark:hover:bg-red-950/40 dark:hover:text-red-400",
 };
 
 const BASE = cn(
+  // A 32px hit area with the icon at 16px — the tinted square on hover is what makes it read as a
+  // button rather than a bare glyph floating in a cell.
   "inline-flex size-8 items-center justify-center rounded-lg",
-  "transition-colors duration-150",
-  "disabled:cursor-not-allowed disabled:opacity-40",
+  "pressable active:scale-[0.92]",
+  // Deeper than the 0.98 on Button: this control is a quarter the size, and the same ratio on a 32px
+  // square is too small a movement to register as a press.
+  "disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100",
   "[&>svg]:size-4",
 );
 
@@ -78,15 +86,24 @@ export function IconLink({
   );
 }
 
-// Wraps a row's actions. `opacity-0 group-hover:opacity-100` is the effect the design asks for, but it
-// must not hide the controls from keyboard users — focus-within brings them back, and they stay visible
-// unconditionally on touch screens, where there is no hover at all.
+// Wraps a row's actions: dimmed until the row is hovered, then full strength.
+//
+// 60% rather than 0. Fully hidden actions are undiscoverable — nothing tells you a row has an Edit
+// button until you happen to sweep the cursor over it, and a keyboard user tabbing through has no idea
+// the controls exist. At 60% they are legible enough to find and quiet enough that a page of them does
+// not compete with the data.
+//
+// Still opacity and not `hidden`: an element removed from the layout would make every row jump by 32px
+// as the cursor crossed it. And focus-within is what brings them to full strength for the keyboard,
+// which the hover rule alone would never do.
 export function RowActions({ children }: { children: ReactNode }) {
   return (
     <div
       className={cn(
         "flex items-center justify-end gap-1",
-        "opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100",
+        // Full strength unconditionally below md: a touch screen has no hover, so a dimmed control there
+        // would simply look permanently disabled.
+        "opacity-100 md:opacity-60 md:group-hover:opacity-100 md:group-focus-within:opacity-100",
         "transition-opacity duration-150",
       )}
     >

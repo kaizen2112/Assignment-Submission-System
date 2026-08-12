@@ -104,7 +104,7 @@ export default function AdminDashboardPage() {
         action={
           <Link
             href="/admin/submissions"
-            className="text-sm font-medium text-indigo-600 transition-colors duration-150 hover:text-indigo-700"
+            className="text-sm font-medium text-indigo-600 transition-colors duration-150 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
           >
             View all
           </Link>
@@ -144,7 +144,7 @@ export default function AdminDashboardPage() {
 
                   <TD>{submission.assignmentTitle}</TD>
 
-                  <TD className="whitespace-nowrap text-xs text-gray-500">
+                  <TD className="whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
                     {formatDateTime(submission.submittedAt)}
                   </TD>
 
@@ -186,18 +186,22 @@ export default function AdminDashboardPage() {
           ].map((step, index) => (
             <li
               key={step.title}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-gray-50 px-4 py-3.5"
+              // An inset step, so it darkens rather than lightens against the card — same reasoning as
+              // the late-submission panel in AssignmentFields.
+              className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-gray-50 px-4 py-3.5 dark:bg-gray-900/50"
             >
               <div className="flex min-w-0 items-start gap-3">
                 <span
                   aria-hidden="true"
-                  className="flex size-6 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-semibold text-indigo-700"
+                  className="flex size-6 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-semibold text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300"
                 >
                   {index + 1}
                 </span>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-900">{step.title.slice(3)}</p>
-                  <p className="mt-0.5 text-sm text-gray-500">{step.body}</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {step.title.slice(3)}
+                  </p>
+                  <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">{step.body}</p>
                 </div>
               </div>
 

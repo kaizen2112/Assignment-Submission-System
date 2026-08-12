@@ -182,18 +182,18 @@ export default function AdminClassesPage() {
                     <TDPrimary>
                       <Link
                         href={`/admin/classes/${schoolClass.id}`}
-                        className="transition-colors duration-150 hover:text-indigo-600"
+                        className="transition-colors duration-150 hover:text-indigo-600 dark:hover:text-indigo-400"
                       >
                         {schoolClass.code}
                       </Link>
                     </TDPrimary>
 
-                    <TD className="text-gray-700">{schoolClass.name}</TD>
+                    <TD className="text-gray-700 dark:text-gray-300">{schoolClass.name}</TD>
 
                     <TD>
                       {/* The list response nests subjects, so no second request is needed to show them. */}
                       {schoolClass.subjects.length === 0 ? (
-                        <span className="text-xs text-gray-400">None yet</span>
+                        <span className="text-xs text-gray-400 dark:text-gray-500">None yet</span>
                       ) : (
                         <div className="flex flex-wrap gap-1">
                           {schoolClass.subjects.map((subject) => (
@@ -205,7 +205,7 @@ export default function AdminClassesPage() {
                       )}
                     </TD>
 
-                    <TD className="whitespace-nowrap text-xs text-gray-500">
+                    <TD className="whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
                       {formatDate(schoolClass.createdAt)}
                     </TD>
 

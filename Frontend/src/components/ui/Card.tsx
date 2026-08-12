@@ -9,7 +9,11 @@ import { cn } from "@/lib/utils";
 
 // Exported so an element Card cannot usefully wrap — a <form> that needs onSubmit, a <label> — can still
 // be the same box without a redundant div around it.
-export const CARD_CLASS = "rounded-xl border border-gray-100 bg-white shadow-sm";
+// Dark mode inverts the depth trick rather than abandoning it: the page ground drops to gray-900 and the
+// card rises to gray-800, so the card is still the lighter of the two and still reads as sitting on top.
+// The border goes to gray-700 because a hairline lighter than the card would outline it instead.
+export const CARD_CLASS =
+  "rounded-xl border border-gray-100 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800";
 
 export function Card({
   className,
@@ -41,8 +45,9 @@ export function CardLink({ className, children }: { className?: string; children
   return (
     <div
       className={cn(
-        "rounded-xl border border-gray-100 bg-white p-5 shadow-sm",
-        "transition-all duration-200 hover:border-gray-200 hover:shadow-md",
+        CARD_CLASS,
+        "p-5",
+        "transition-all duration-200 hover:border-gray-200 hover:shadow-md dark:hover:border-gray-600",
         className,
       )}
     >
@@ -65,7 +70,7 @@ export function CardLabel({
   return (
     <Tag
       className={cn(
-        "text-xs font-semibold uppercase tracking-wider text-gray-400",
+        "text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500",
         className,
       )}
     >
@@ -83,7 +88,9 @@ export function CardHeader({
   children: ReactNode;
 }) {
   return (
-    <div className={cn("border-b border-gray-100 px-6 py-4", className)}>{children}</div>
+    <div className={cn("border-b border-gray-100 px-6 py-4 dark:border-gray-700", className)}>
+      {children}
+    </div>
   );
 }
 
@@ -106,7 +113,9 @@ export function FormCard({
       {label && (
         <CardHeader>
           <CardLabel as="h2">{label}</CardLabel>
-          {description && <p className="mt-1.5 text-sm text-gray-500">{description}</p>}
+          {description && (
+            <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">{description}</p>
+          )}
         </CardHeader>
       )}
 

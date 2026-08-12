@@ -111,40 +111,48 @@ export default function StudentAssignmentDetailPage() {
         {submission?.status === "Graded" && (
           <section
             aria-label="Your grade"
-            className="rounded-xl border border-green-200 bg-green-50 p-6"
+            // The one panel that stays green in both themes — it is the thing the student came for, and
+            // it has to be findable at a glance either way. `-950/20` is the lightest fill in the dark
+            // palette on purpose: everything else is a chip or an alert, this is a whole card.
+            className="rounded-xl border border-green-200 bg-green-50 p-6 dark:border-green-800 dark:bg-green-950/20"
           >
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="flex items-center gap-3">
                 <span
                   aria-hidden="true"
-                  className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-green-100 text-green-700"
+                  className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300"
                 >
                   <Award className="size-5" />
                 </span>
                 <div>
-                  <h2 className="text-base font-semibold text-green-900">Your grade</h2>
-                  <p className="mt-0.5 text-xs text-green-700">
+                  <h2 className="text-base font-semibold text-green-900 dark:text-green-100">
+                    Your grade
+                  </h2>
+                  <p className="mt-0.5 text-xs text-green-700 dark:text-green-400">
                     Graded {formatDateTime(submission.gradedAt)}
                   </p>
                 </div>
               </div>
 
-              <p className="text-3xl font-bold tabular-nums text-green-900">
+              {/* tabular-nums so "85 / 100" and "9 / 100" occupy the same width — without it the score
+                  shifts sideways between assignments, which on the one number the page exists to show
+                  reads as the layout being unstable. */}
+              <p className="text-3xl font-bold tabular-nums text-green-900 dark:text-green-100">
                 {formatMarks(submission.marks, submission.maxMarks)}
               </p>
             </div>
 
             {submission.feedback ? (
-              <div className="mt-5 border-t border-green-200 pt-5">
-                <CardLabel as="h3" className="text-green-700">
+              <div className="mt-5 border-t border-green-200 pt-5 dark:border-green-800">
+                <CardLabel as="h3" className="text-green-700 dark:text-green-400">
                   Feedback
                 </CardLabel>
-                <p className="mt-2 whitespace-pre-wrap wrap-break-word border-l-2 border-green-300 pl-4 text-sm leading-relaxed text-green-900">
+                <p className="mt-2 whitespace-pre-wrap wrap-break-word border-l-2 border-green-300 pl-4 text-sm leading-relaxed text-green-900 dark:border-green-700 dark:text-green-100">
                   {submission.feedback}
                 </p>
               </div>
             ) : (
-              <p className="mt-4 text-sm text-green-800">
+              <p className="mt-4 text-sm text-green-800 dark:text-green-300">
                 Your teacher left no written feedback.
               </p>
             )}
@@ -174,29 +182,29 @@ export default function StudentAssignmentDetailPage() {
               <div key={item.label} className="flex items-start gap-3">
                 <span
                   aria-hidden="true"
-                  className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gray-50 text-gray-400 [&>svg]:size-4"
+                  className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gray-50 text-gray-400 dark:bg-gray-700 dark:text-gray-500 [&>svg]:size-4"
                 >
                   {item.icon}
                 </span>
                 <div className="min-w-0">
-                  <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                  <dt className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
                     {item.label}
                   </dt>
-                  <dd className="mt-0.5 text-sm font-medium text-gray-900">{item.value}</dd>
-                  {item.sub && <dd className="text-xs text-gray-500">{item.sub}</dd>}
+                  <dd className="mt-0.5 text-sm font-medium text-gray-900 dark:text-gray-100">{item.value}</dd>
+                  {item.sub && <dd className="text-xs text-gray-500 dark:text-gray-400">{item.sub}</dd>}
                 </div>
               </div>
             ))}
           </dl>
 
-          <div className="mt-6 border-t border-gray-100 pt-6">
+          <div className="mt-6 border-t border-gray-100 dark:border-gray-700 pt-6">
             <div className="mb-3 flex items-center gap-2">
-              <FileText aria-hidden="true" className="size-3.5 text-gray-400" />
+              <FileText aria-hidden="true" className="size-3.5 text-gray-400 dark:text-gray-500" />
               <CardLabel as="h2">Description</CardLabel>
             </div>
             {/* whitespace-pre-wrap: the teacher's line breaks are meaningful, and rendering this as
                 HTML would both lose them and invite injection. */}
-            <p className="whitespace-pre-wrap wrap-break-word border-l-2 border-gray-200 pl-4 text-sm leading-relaxed text-gray-700">
+            <p className="whitespace-pre-wrap wrap-break-word border-l-2 border-gray-200 pl-4 text-sm leading-relaxed text-gray-700 dark:border-gray-600 dark:text-gray-300">
               {assignment.description}
             </p>
           </div>
@@ -204,12 +212,12 @@ export default function StudentAssignmentDetailPage() {
 
         <Card as="section" aria-label="Your submission" className="p-6">
           <div className="mb-5 flex flex-wrap items-baseline justify-between gap-3">
-            <h2 className="text-base font-semibold text-gray-900">
+            <h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">
               {submission ? "Your submission" : "Submit your answer"}
             </h2>
 
             {submission && (
-              <p className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+              <p className="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                 <LateBadge isLate={submission.isLate} />
                 Submitted {formatDateTime(submission.submittedAt)}
                 {submission.updatedAt && ` · edited ${formatDateTime(submission.updatedAt)}`}
@@ -227,9 +235,9 @@ export default function StudentAssignmentDetailPage() {
           />
 
           {submission && (assignment.isOverdue || submission.status === "Graded") && (
-            <div className="mt-6 border-t border-gray-100 pt-6">
+            <div className="mt-6 border-t border-gray-100 dark:border-gray-700 pt-6">
               <CardLabel as="h3">Your answer</CardLabel>
-              <p className="mt-2 whitespace-pre-wrap wrap-break-word border-l-2 border-gray-200 pl-4 text-sm leading-relaxed text-gray-700">
+              <p className="mt-2 whitespace-pre-wrap wrap-break-word border-l-2 border-gray-200 pl-4 text-sm leading-relaxed text-gray-700 dark:border-gray-600 dark:text-gray-300">
                 {submission.answerText}
               </p>
             </div>

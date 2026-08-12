@@ -2,6 +2,13 @@
    preflight reset, the utility engine, and automatic content detection. */
 @import "tailwindcss";
 
+/* Class-based dark mode. Tailwind 4 has no tailwind.config.js to put `darkMode: 'class'` in — the
+   variant is declared here instead, and this is the exact equivalent. `:where()` keeps the selector
+   at zero specificity, so `dark:bg-gray-800` still ranks the same as the `bg-white` it overrides and
+   source order decides — which is what makes a plain `dark:` utility work at all.
+   The variant matches the root itself as well as its descendants, so `dark:` works on <body> too. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Design tokens exposed as Tailwind theme values, so `bg-surface` works alongside the built-ins.
    The palette is deliberately two colours wide: indigo for anything interactive or active, and
    neutral grays for everything else. A third accent would compete for the same attention. */
@@ -20,10 +27,54 @@
   --color-sidebar: #0f172a;
 }
 
+/* Dark mode re-points the tokens rather than asking every `bg-surface` call site to grow a `dark:`
+   twin. A token is a role, not a colour, so the role is what stays fixed across themes.
+   Only `surface` actually moves: the accent is legible on both grounds, and the sidebar is already
+   dark in light mode — inverting it would be the one element that gets *lighter* in dark mode. */
+.dark {
+  --color-surface: #111827;
+}
+
 body {
   background-color: var(--color-surface);
   color: #111827;
   -webkit-font-smoothing: antialiased;
+}
+
+.dark body {
+  color: #f3f4f6;
+}
+
+/* Hands the theme to the browser's own chrome — scrollbars, the native date/time picker panel, and the
+   spinner on a number input. Those are drawn by the OS, not by CSS, so without this a dark page keeps a
+   bright white scrollbar down its right edge and the deadline picker opens as a white sheet. */
+:root {
+  color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
+}
+
+/* Every interactive element gets a pointer. Left to the browser, a <button> shows the text caret and
+   a <select> shows an arrow, which reads as "this is a form widget" rather than "you can click this".
+   Element selectors, so any Tailwind `cursor-*` utility at a call site still wins. */
+button,
+a[href],
+[role="button"],
+select,
+summary,
+label[for] {
+  cursor: pointer;
+}
+
+/* …except when the control is refusing the click. This has to be stated here rather than left to the
+   `disabled:cursor-not-allowed` utilities, because a control that only sometimes carries that class
+   would otherwise still invite a click it cannot accept. */
+button:disabled,
+select:disabled,
+[aria-disabled="true"] {
+  cursor: not-allowed;
 }
 
 /* Micro-interactions, globally.
@@ -40,11 +91,32 @@ body {
   transition-timing-function: ease;
 }
 
+/* The press feel, for anything that reacts to being clicked.
+   This exists as one utility because `transition-transform` and `transition-colors` are the same CSS
+   property under two names: putting both on a button means one silently wins and the other's animation
+   never happens. Declaring the property list once is the only way to get colour and transform to
+   animate together — and at different speeds, which is the point. 75ms on the transform so the scale
+   tracks the click; 150ms on colour, where anything faster reads as a flicker. */
+@utility pressable {
+  transition-property: color, background-color, border-color, box-shadow, transform;
+  transition-duration: 150ms, 150ms, 150ms, 150ms, 75ms;
+  transition-timing-function: ease;
+}
+
 /* One focus ring for the whole app, in the accent colour. :focus-visible rather than :focus so it
-   appears for keyboard users and not on a mouse click. */
+   appears for keyboard users and not on a mouse click.
+   An outline rather than a `ring-2 ring-offset-2` utility per control: outline-offset is transparent,
+   so the same one rule reads correctly on the white card, the gray page and the dark sidebar alike.
+   A ring-offset would need its own colour declared for every one of those grounds, in both themes. */
 :focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
+}
+
+/* indigo-600 is chosen for contrast against white; on a gray-900 ground it goes muddy. indigo-400 is
+   the same hue with enough luminance to read as a focus ring rather than a dark smudge. */
+.dark :focus-visible {
+  outline-color: #818cf8;
 }
 
 /* `line-clamp-2` is not defined here on purpose — it has been a Tailwind core utility since v3.3, so

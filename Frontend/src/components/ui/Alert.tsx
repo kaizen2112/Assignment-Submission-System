@@ -4,17 +4,28 @@ import { cn } from "@/lib/utils";
 
 type AlertTone = "error" | "warning" | "info" | "success";
 
+// Same tint-flip as Badge, one step stronger: an alert is a full-width panel rather than a chip, so its
+// fill is `-950/30` — light enough to tell apart from the card behind it, dark enough not to glare.
+// The icon keeps its own brighter shade so it stays the first thing the eye lands on.
 const TONES: Record<AlertTone, { box: string; icon: string; Icon: typeof Info }> = {
-  error: { box: "border-red-200 bg-red-50 text-red-800", icon: "text-red-500", Icon: XCircle },
+  error: {
+    box: "border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200",
+    icon: "text-red-500 dark:text-red-400",
+    Icon: XCircle,
+  },
   warning: {
-    box: "border-amber-200 bg-amber-50 text-amber-900",
-    icon: "text-amber-500",
+    box: "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100",
+    icon: "text-amber-500 dark:text-amber-400",
     Icon: AlertTriangle,
   },
-  info: { box: "border-blue-200 bg-blue-50 text-blue-800", icon: "text-blue-500", Icon: Info },
+  info: {
+    box: "border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-200",
+    icon: "text-blue-500 dark:text-blue-400",
+    Icon: Info,
+  },
   success: {
-    box: "border-green-200 bg-green-50 text-green-800",
-    icon: "text-green-600",
+    box: "border-green-200 bg-green-50 text-green-800 dark:border-green-900 dark:bg-green-950/30 dark:text-green-200",
+    icon: "text-green-600 dark:text-green-400",
     Icon: CheckCircle2,
   },
 };

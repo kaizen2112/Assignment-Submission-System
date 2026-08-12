@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   BookOpen,
   ClipboardList,
@@ -52,13 +53,24 @@ const NAV: Record<Role, NavItem[]> = {
 
 // Dark navigation against light content. The contrast does the work a border would otherwise have to do:
 // you always know whether you are looking at the app's chrome or at your data.
+//
+// In dark mode that contrast has to be re-earned rather than inherited. The page ground drops to
+// gray-900 (#111827), which is within a few points of slate-900 (#0f172a) — near enough that the
+// sidebar would dissolve into the content and the entire layout idea with it. So the sidebar goes
+// *darker* instead, to gray-950, staying the darkest surface on screen in both themes. Making it
+// lighter would have been the alternative, and it is the wrong one: navigation that outshines the data
+// inverts the hierarchy the design is built on.
 export function Sidebar({ role }: { role: Role }) {
   const pathname = usePathname();
   const profile = useSession();
   const items = NAV[role];
 
+  // The sliding pill is the one animation here that moves a box rather than fading it, so it is also the
+  // one most worth switching off for someone who asked for no motion.
+  const reduce = useReducedMotion();
+
   return (
-    <div className="flex h-full flex-col bg-slate-900">
+    <div className="flex h-full flex-col bg-slate-900 dark:bg-gray-950">
       <nav aria-label="Main navigation" className="flex flex-1 flex-col gap-1 p-3">
         {items.map((item) => {
           // startsWith, not equality, so /teacher/assignments/123 keeps "Assignments" highlighted.
@@ -74,22 +86,37 @@ export function Sidebar({ role }: { role: Role }) {
               className={cn(
                 "relative flex h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium",
                 "transition-colors duration-150",
-                isActive
-                  ? "bg-white/10 text-white"
-                  : "text-white/70 hover:bg-white/5 hover:text-white",
+                // The active item no longer paints its own background — the shared pill below does, so
+                // that the fill can travel between items instead of blinking off one and on at another.
+                isActive ? "text-white" : "text-white/70 hover:bg-white/5 hover:text-white",
               )}
             >
-              {/* The accent bar, drawn only for the active item. Absolutely positioned so it does not
-                  shift the label by 3px when the page changes. */}
+              {/* One pill, shared across every nav item by its layoutId. Only ever rendered inside the
+                  active link, so when the route changes Framer sees the same identity in a new place and
+                  interpolates between the two — the highlight slides rather than jumping. The accent bar
+                  rides inside it, which is why it does not need a layoutId of its own.
+
+                  A spring rather than a duration: the distance varies with how far apart the two items
+                  are, and a fixed duration makes a short hop feel sluggish and a long one feel rushed. */}
               {isActive && (
-                <span
+                <motion.span
+                  layoutId="sidebar-active"
                   aria-hidden="true"
-                  className="absolute inset-y-1.5 left-0 w-0.75 rounded-r-full bg-indigo-400"
-                />
+                  className="absolute inset-0 rounded-lg bg-white/10"
+                  transition={
+                    reduce ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 34 }
+                  }
+                >
+                  {/* The accent bar. Inset vertically so it reads as a marker against the pill's edge
+                      rather than as a border on it. */}
+                  <span className="absolute inset-y-1.5 left-0 w-0.75 rounded-r-full bg-indigo-400" />
+                </motion.span>
               )}
 
-              <Icon aria-hidden="true" className="size-4 shrink-0" />
-              <span className="truncate">{item.label}</span>
+              {/* `relative` on both: the pill is absolutely positioned and would otherwise paint over
+                  static content, hiding the very label it is meant to highlight. */}
+              <Icon aria-hidden="true" className="relative size-4 shrink-0" />
+              <span className="relative truncate">{item.label}</span>
             </Link>
           );
         })}

@@ -31,7 +31,9 @@ export function TableWrap({
     <div
       className={cn(
         "overflow-x-auto",
-        bare ? "border-t border-gray-100" : "rounded-xl border border-gray-100 bg-white shadow-sm",
+        bare
+          ? "border-t border-gray-100 dark:border-gray-700"
+          : "rounded-xl border border-gray-100 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800",
         className,
       )}
     >
@@ -41,11 +43,17 @@ export function TableWrap({
 }
 
 export function THead({ children }: { children: ReactNode }) {
-  return <thead className="border-b border-gray-100 bg-gray-50">{children}</thead>;
+  // gray-800/50 rather than a solid tone: the header has to read as a shade of the card it sits in, and
+  // a translucent black over gray-800 stays related to it in a way a picked gray-750 would not.
+  return (
+    <thead className="border-b border-gray-100 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50">
+      {children}
+    </thead>
+  );
 }
 
 export function TBody({ children }: { children: ReactNode }) {
-  return <tbody className="divide-y divide-gray-100">{children}</tbody>;
+  return <tbody className="divide-y divide-gray-100 dark:divide-gray-700">{children}</tbody>;
 }
 
 export function TR({
@@ -61,9 +69,13 @@ export function TR({
 }) {
   return (
     <tr
+      // No cursor-pointer here, despite the hover highlight. These rows do not navigate on click — the
+      // link is the title in the first cell, and the row's own actions are in the last one. A pointer
+      // cursor across the whole row would promise a click target that four cells out of five do not
+      // have, and the reader finds that out by clicking an email address and getting nothing.
       className={cn(
         "group",
-        hover && "transition-colors duration-150 hover:bg-gray-50",
+        hover && "transition-colors duration-150 hover:bg-gray-50 dark:hover:bg-gray-800/50",
         className,
       )}
     >
@@ -86,7 +98,7 @@ export function TH({
       // scope="col" is what tells a screen reader this cell heads its column.
       scope="col"
       className={cn(
-        "h-10 whitespace-nowrap px-4 text-xs font-semibold uppercase tracking-wider text-gray-500",
+        "h-10 whitespace-nowrap px-4 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400",
         align === "right" ? "text-right" : "text-left",
         className,
       )}
@@ -110,7 +122,7 @@ export function TD({
       // h-14 on the cell rather than the row: a <tr> ignores height, so the row's 56px comes from its
       // tallest cell.
       className={cn(
-        "h-14 px-4 align-middle text-gray-600",
+        "h-14 px-4 align-middle text-gray-600 dark:text-gray-300",
         align === "right" ? "text-right" : "text-left",
         className,
       )}
@@ -123,7 +135,9 @@ export function TD({
 // The first cell of a row — the thing the row is about. Darker and heavier than the data beside it, so
 // scanning down the table reads as a list of names rather than a grid of equal text.
 export function TDPrimary({ children, className }: { children: ReactNode; className?: string }) {
-  return <TD className={cn("font-medium text-gray-900", className)}>{children}</TD>;
+  return (
+    <TD className={cn("font-medium text-gray-900 dark:text-gray-100", className)}>{children}</TD>
+  );
 }
 
 // Placeholder rows while a page loads, sized to the real column count so the layout does not jump when

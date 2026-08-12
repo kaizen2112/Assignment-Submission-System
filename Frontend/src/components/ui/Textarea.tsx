@@ -36,7 +36,7 @@ export function Textarea({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline justify-between gap-2">
-        <label htmlFor={id} className="text-sm font-semibold text-gray-700">
+        <label htmlFor={id} className="text-sm font-semibold text-gray-700 dark:text-gray-200">
           {label}
           {rest.required && (
             <span aria-hidden="true" className="ml-0.5 text-red-500">
@@ -48,7 +48,12 @@ export function Textarea({
         {showCount && maxLength !== undefined && (
           // gray-400 until it matters: a counter that is always dark competes with the label for
           // attention while saying nothing useful at 12 of 5000 characters.
-          <span className={cn("text-xs tabular-nums", atLimit ? "text-red-500" : "text-gray-400")}>
+          <span
+            className={cn(
+              "text-xs tabular-nums",
+              atLimit ? "text-red-500 dark:text-red-400" : "text-gray-400 dark:text-gray-500",
+            )}
+          >
             {length} / {maxLength}
           </span>
         )}
@@ -73,12 +78,15 @@ export function Textarea({
       />
 
       {error ? (
-        <p id={`${id}-error`} className="flex items-start gap-1.5 text-sm text-red-500">
+        <p
+          id={`${id}-error`}
+          className="flex items-start gap-1.5 text-sm text-red-500 dark:text-red-400"
+        >
           <AlertCircle aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
           <span>{error}</span>
         </p>
       ) : hint ? (
-        <p id={`${id}-hint`} className="text-xs text-gray-500">
+        <p id={`${id}-hint`} className="text-xs text-gray-500 dark:text-gray-400">
           {hint}
         </p>
       ) : null}

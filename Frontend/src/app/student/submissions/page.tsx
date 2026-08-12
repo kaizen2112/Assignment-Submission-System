@@ -102,7 +102,7 @@ export default function MySubmissionsPage() {
                     <TDPrimary>
                       <Link
                         href={`/student/assignments/${submission.assignmentId}`}
-                        className="transition-colors duration-150 hover:text-indigo-600"
+                        className="transition-colors duration-150 hover:text-indigo-600 dark:hover:text-indigo-400"
                       >
                         {submission.assignmentTitle}
                       </Link>
@@ -115,7 +115,7 @@ export default function MySubmissionsPage() {
                       </div>
                     </TD>
 
-                    <TD className="whitespace-nowrap text-xs text-gray-500">
+                    <TD className="whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
                       {formatDateTime(submission.submittedAt)}
                     </TD>
 
@@ -129,7 +129,7 @@ export default function MySubmissionsPage() {
                       {submission.feedback ? (
                         // line-clamp so one long comment cannot stretch the row; the full text is on
                         // the assignment page.
-                        <span className="line-clamp-2 text-xs text-gray-500">
+                        <span className="line-clamp-2 text-xs text-gray-500 dark:text-gray-400">
                           {submission.feedback}
                         </span>
                       ) : (
