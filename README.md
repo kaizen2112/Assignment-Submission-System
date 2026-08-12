@@ -62,7 +62,7 @@ frontend is treated as untrusted. Hiding a button is presentation; returning `40
   that resolves before first paint.
 - **Swagger UI** with a working **Authorize** button, so every endpoint can be exercised from a
   browser.
-- **113 unit tests** covering all 8 business rules, the comment rules C1–C5, and the role guards.
+- **123 unit tests** covering all 8 business rules, the comment rules C1–C5, and the role guards.
 - **One-command Docker setup** and **GitHub Actions CI** on every push.
 
 ---

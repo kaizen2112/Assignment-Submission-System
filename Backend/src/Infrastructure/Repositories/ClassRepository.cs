@@ -137,6 +137,20 @@ public sealed class ClassRepository : IClassRepository
             .ThenBy(e => e.Id)
             .ToPagedResultAsync(pagination, cancellationToken);
 
+    // The mirror of the roster above, keyed on the student instead of the class. Sorted by class name for
+    // the same reason: this is a short list somebody reads, not a log of when they were enrolled.
+    public Task<PagedResult<StudentEnrollment>> GetStudentEnrollmentsPagedAsync(
+        Guid studentId,
+        PaginationQuery pagination,
+        CancellationToken cancellationToken = default) =>
+        _context.StudentEnrollments
+            .AsNoTracking()
+            .Where(e => e.StudentId == studentId)
+            .Include(e => e.Class)
+            .OrderBy(e => e.Class.Name)
+            .ThenBy(e => e.Id)
+            .ToPagedResultAsync(pagination, cancellationToken);
+
     public async Task AddEnrollmentAsync(
         StudentEnrollment enrollment,
         CancellationToken cancellationToken = default) =>

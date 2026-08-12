@@ -32,7 +32,11 @@ public sealed class Assignment
     public Subject Subject { get; internal set; } = null!;
 
     public Guid CreatedByTeacherId { get; private set; }
-    public User CreatedByTeacher { get; private set; } = null!;
+
+    // `internal set` for the same reason as Class and Subject above: EF fills it, no factory does, and
+    // the response carries the teacher's name — so a unit test has to be able to arrange the graph a
+    // repository would return. See Domain/AssemblyInfo.cs.
+    public User CreatedByTeacher { get; internal set; } = null!;
 
     public DateTime CreatedAt { get; private set; }
     public DateTime UpdatedAt { get; private set; }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { BookOpen, CheckCircle2, CircleDashed, GraduationCap, PartyPopper } from "lucide-react";
 import { AssignmentCard } from "@/components/student/AssignmentCard";
+import { EnrolledClasses } from "@/components/student/EnrolledClasses";
 import { WelcomeHeader } from "@/components/layout/WelcomeHeader";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
@@ -29,6 +30,7 @@ export default function StudentDashboardPage() {
     <>
       <WelcomeHeader
         subtitle="Assignments for your classes and where each one stands."
+        meta={<EnrolledClasses />}
         action={
           <Link href="/student/assignments">
             <Button variant="secondary">All assignments</Button>

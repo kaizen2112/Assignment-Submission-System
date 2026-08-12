@@ -42,6 +42,10 @@ public sealed record AssignmentResponse(
     Guid SubjectId,
     string SubjectName,
     Guid CreatedByTeacherId,
+    // The name as well as the id. A student sees who set the work, and resolving an id to a name would
+    // otherwise mean a second request per assignment to an endpoint students cannot call anyway — only
+    // an admin may list users.
+    string CreatedByTeacherName,
     DateTime CreatedAt,
     DateTime UpdatedAt);
 
@@ -59,6 +63,11 @@ public sealed record AssignmentListItemResponse(
     string ClassName,
     Guid SubjectId,
     string SubjectName,
+    // Present on the list item too, not just the detail response. The student's assignment cards show who
+    // set each one, and a card that had to fetch the detail response to fill in a name would turn one
+    // request into N — the same reason Description is left out above.
+    Guid CreatedByTeacherId,
+    string CreatedByTeacherName,
     DateTime CreatedAt);
 
 // What a teacher is allowed to create an assignment for: one row per class+subject pair they hold.

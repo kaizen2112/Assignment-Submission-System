@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Award, CalendarClock, FileText, Target, Timer } from "lucide-react";
+import { Award, CalendarClock, FileText, Target, Timer, UserRound } from "lucide-react";
 import { CommentSection } from "@/components/comments/CommentSection";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { SubmissionForm } from "@/components/student/SubmissionForm";
@@ -160,14 +160,24 @@ export default function StudentAssignmentDetailPage() {
           </section>
         )}
 
+        {/* Four items now, so the breakpoints change with them: 3 columns would leave the fourth alone on
+            a second row, which reads as something having gone wrong rather than as a layout. */}
         <Card as="section" aria-label="Assignment details" className="p-6">
-          <dl className="grid gap-5 sm:grid-cols-3">
+          <dl className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {[
               {
                 icon: <CalendarClock />,
                 label: "Deadline",
                 value: formatDateTime(assignment.deadline),
                 sub: formatRelative(assignment.deadline),
+              },
+              {
+                icon: <UserRound />,
+                label: "Set by",
+                value: assignment.createdByTeacherName,
+                // The subject rather than the class: the header above already names the class, and what
+                // distinguishes two assignments from the same teacher is which subject they teach it for.
+                sub: assignment.subjectName,
               },
               {
                 icon: <Target />,

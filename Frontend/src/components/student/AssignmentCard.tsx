@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, UserRound } from "lucide-react";
 import { Badge, LateBadge, SubjectBadge, SubmissionStatusBadge } from "@/components/ui/Badge";
 import { CARD_CLASS } from "@/components/ui/Card";
 import { DeadlineLabel } from "@/components/ui/DeadlineLabel";
@@ -57,6 +57,15 @@ export function AssignmentCard({
 
       <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
         {assignment.className} · {assignment.maxMarks} marks
+      </p>
+
+      {/* Who set it. On its own line rather than appended to the one above, because a name is the part a
+          student scans for — "which teacher is this for" is how they group their work — and it would be
+          lost as the third clause of a run-on line. The list endpoint carries the name, so this costs no
+          extra request. */}
+      <p className="mt-1 inline-flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+        <UserRound aria-hidden="true" className="size-3.5 shrink-0" />
+        {assignment.createdByTeacherName}
       </p>
 
       {/* The payoff, once it exists. A student opening this dashboard after grading wants the number,

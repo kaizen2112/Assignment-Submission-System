@@ -17,15 +17,18 @@ public sealed class AssignmentService : IAssignmentService
 
     private readonly IAssignmentRepository _assignments;
     private readonly IClassRepository _classes;
+    private readonly IUserRepository _users;
     private readonly ICurrentUserService _currentUser;
 
     public AssignmentService(
         IAssignmentRepository assignments,
         IClassRepository classes,
+        IUserRepository users,
         ICurrentUserService currentUser)
     {
         _assignments = assignments;
         _classes = classes;
+        _users = users;
         _currentUser = currentUser;
     }
 
@@ -154,7 +157,15 @@ public sealed class AssignmentService : IAssignmentService
 
         // Mapped from the entities already in hand rather than re-reading: the navigation properties
         // are not populated on a freshly constructed entity.
-        return Result<AssignmentResponse>.Success(ToResponse(assignment, @class.Name, subject.Name));
+        //
+        // The author is the caller, so their name is the one thing not already in hand — the token carries
+        // a user id and a role, not a display name. Looked up rather than re-reading the assignment through
+        // the repository, which would pull Class and Subject back a second time for a name we already know
+        // belongs to this caller. Same reason CommentService fetches the author after an insert.
+        var teacher = await _users.GetByIdAsync(caller.UserId, cancellationToken);
+
+        return Result<AssignmentResponse>.Success(
+            ToResponse(assignment, @class.Name, subject.Name, teacher?.FullName ?? string.Empty));
     }
 
     public async Task<Result<AssignmentResponse>> UpdateAsync(
@@ -318,11 +329,16 @@ public sealed class AssignmentService : IAssignmentService
     private static Result<AssignmentResponse> NotFound() =>
         Result<AssignmentResponse>.Failure("Assignment not found.", ErrorType.NotFound);
 
-    // Class and Subject are eager-loaded by every repository read, so these are already in memory.
+    // Class, Subject and CreatedByTeacher are eager-loaded by every repository read, so these are already
+    // in memory.
     private static AssignmentResponse ToResponse(AssignmentEntity a) =>
-        ToResponse(a, a.Class.Name, a.Subject.Name);
+        ToResponse(a, a.Class.Name, a.Subject.Name, a.CreatedByTeacher.FullName);
 
-    private static AssignmentResponse ToResponse(AssignmentEntity a, string className, string subjectName) =>
+    private static AssignmentResponse ToResponse(
+        AssignmentEntity a,
+        string className,
+        string subjectName,
+        string teacherName) =>
         new(
             a.Id,
             a.Title,
@@ -339,6 +355,7 @@ public sealed class AssignmentService : IAssignmentService
             a.SubjectId,
             subjectName,
             a.CreatedByTeacherId,
+            teacherName,
             a.CreatedAt,
             a.UpdatedAt);
 
@@ -355,6 +372,8 @@ public sealed class AssignmentService : IAssignmentService
             a.Class.Name,
             a.SubjectId,
             a.Subject.Name,
+            a.CreatedByTeacherId,
+            a.CreatedByTeacher.FullName,
             a.CreatedAt);
 
     private static TeachingScopeResponse ToTeachingScope(TeacherAssignment ta) =>

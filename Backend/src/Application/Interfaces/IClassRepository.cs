@@ -84,6 +84,18 @@ public interface IClassRepository
         PaginationQuery pagination,
         CancellationToken cancellationToken = default);
 
+    // The same rows as GetEnrolledClassIdsAsync, read from the other side: that one answers rule 3 for
+    // another query and so returns bare ids, while this one is the student's own view of which classes they
+    // are in — so it carries the Class and is paginated like every other list.
+    //
+    // Deliberately not built on the ids: turning them into names would be a second query per class, and a
+    // student enrolled in a class with no published assignments would still have to appear. That last case
+    // is exactly why this cannot be derived from the assignment list instead.
+    Task<PagedResult<StudentEnrollment>> GetStudentEnrollmentsPagedAsync(
+        Guid studentId,
+        PaginationQuery pagination,
+        CancellationToken cancellationToken = default);
+
     Task AddEnrollmentAsync(
         StudentEnrollment enrollment,
         CancellationToken cancellationToken = default);

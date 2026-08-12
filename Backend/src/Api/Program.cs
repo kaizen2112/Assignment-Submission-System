@@ -186,6 +186,7 @@ builder.Services.AddScoped<IAssignmentService, AssignmentService>();
 builder.Services.AddScoped<ISubmissionService, SubmissionService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<ICommentService, CommentService>();
+builder.Services.AddScoped<IClassService, ClassService>();
 
 var app = builder.Build();
 

@@ -20,7 +20,7 @@ namespace AssignmentSystem.UnitTests.Services;
 public sealed class AssignmentServiceTests
 {
     private static AssignmentService Build(MockRepositoryHelper.ServiceMocks mocks) =>
-        new(mocks.Assignments.Object, mocks.Classes.Object, mocks.CurrentUser.Object);
+        new(mocks.Assignments.Object, mocks.Classes.Object, mocks.Users.Object, mocks.CurrentUser.Object);
 
     private static CreateAssignmentRequest CreateRequest(Guid classId, Guid subjectId) =>
         new(
@@ -392,6 +392,57 @@ public sealed class AssignmentServiceTests
         result.IsSuccess.Should().BeTrue();
         result.Value.Id.Should().Be(published.Id);
         result.Value.Status.Should().Be(nameof(AssignmentStatus.Published));
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_Student_NamesTheTeacherWhoSetTheWork()
+    {
+        // A student can see who set an assignment. Worth its own test because the name is the one field
+        // here that comes from a navigation the repository has to Include — drop that Include and this is
+        // a NullReferenceException, not a missing string, so nothing subtler would catch it.
+        var student = EntityBuilders.Student();
+        var teacher = EntityBuilders.Teacher("Sarah Ahmed", "sarah@test.com");
+        var published = EntityBuilders.Assignment(
+            status: AssignmentStatus.Published, teacherId: teacher.Id, createdByTeacher: teacher);
+
+        var mocks = new MockRepositoryHelper.ServiceMocks
+        {
+            Assignments = MockRepositoryHelper.AssignmentsForStudent(published, student.Id),
+            CurrentUser = MockRepositoryHelper.CurrentUser(student.Id, Role.Student)
+        };
+
+        var result = await Build(mocks).GetByIdAsync(published.Id, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.CreatedByTeacherId.Should().Be(teacher.Id);
+        result.Value.CreatedByTeacherName.Should().Be("Sarah Ahmed");
+    }
+
+    [Fact]
+    public async Task GetPagedAsync_ListRows_AlsoNameTheTeacher()
+    {
+        // The list carries the name as well as the detail response. Without it the student's assignment
+        // cards would each need a detail request to fill in one string — the N+1 the Include exists to
+        // avoid, and the same reason Description is left off this shape.
+        var student = EntityBuilders.Student();
+        var teacher = EntityBuilders.Teacher("Rafiq Hasan", "rafiq@test.com");
+        var published = EntityBuilders.Assignment(
+            status: AssignmentStatus.Published, teacherId: teacher.Id, createdByTeacher: teacher);
+
+        var mocks = new MockRepositoryHelper.ServiceMocks
+        {
+            Assignments = MockRepositoryHelper.AssignmentsEmpty().WithPage(published),
+            CurrentUser = MockRepositoryHelper.CurrentUser(student.Id, Role.Student)
+        };
+
+        var result = await Build(mocks).GetPagedAsync(
+            new AssignmentQueryParameters(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+
+        var row = result.Value.Items.Should().ContainSingle().Subject;
+        row.CreatedByTeacherId.Should().Be(teacher.Id);
+        row.CreatedByTeacherName.Should().Be("Rafiq Hasan");
     }
 
     [Fact]

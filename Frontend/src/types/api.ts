@@ -46,15 +46,17 @@ export interface Assignment {
   subjectId: string;
   subjectName: string;
   createdByTeacherId: string;
+  // Who set the work. Sent as a name and not only an id, because resolving one to the other client-side
+  // would mean listing users — which only an admin may do.
+  createdByTeacherName: string;
   createdAt: string;
   updatedAt: string;
 }
 
 // The list endpoint omits `description` — up to 5000 characters per row, which no list screen shows.
-export type AssignmentListItem = Omit<
-  Assignment,
-  "description" | "createdByTeacherId" | "updatedAt"
->;
+// It does carry the teacher, though: the student's cards name whoever set each assignment, and filling
+// that in from the detail endpoint would be one request per card.
+export type AssignmentListItem = Omit<Assignment, "description" | "updatedAt">;
 
 export interface CreateAssignmentRequest {
   title: string;
@@ -159,6 +161,15 @@ export interface SchoolClass {
 export interface CreateClassRequest {
   name: string;
   code: string;
+}
+
+// One class the signed-in student is enrolled in (Application/DTOs/Class/ClassDtos.cs). Deliberately not
+// `SchoolClass`: that shape is the admin's, and carries the class's whole subject list.
+export interface EnrolledClass {
+  classId: string;
+  className: string;
+  classCode: string;
+  enrolledAt: string;
 }
 
 export interface CreateSubjectRequest {

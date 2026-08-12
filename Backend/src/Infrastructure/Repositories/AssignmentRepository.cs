@@ -13,12 +13,13 @@ public sealed class AssignmentRepository : IAssignmentRepository
 
     public AssignmentRepository(AppDbContext context) => _context = context;
 
-    // Tracked, because callers mutate the result (Publish, update, delete). Class and Subject come
-    // along because the detail response shows their names.
+    // Tracked, because callers mutate the result (Publish, update, delete). Class, Subject and the
+    // authoring teacher come along because the detail response shows all three names.
     public Task<Assignment?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
         _context.Assignments
             .Include(a => a.Class)
             .Include(a => a.Subject)
+            .Include(a => a.CreatedByTeacher)
             .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
 
     public Task<Assignment?> GetPublishedForStudentAsync(
@@ -28,6 +29,7 @@ public sealed class AssignmentRepository : IAssignmentRepository
         StudentScope(studentId)
             .Include(a => a.Class)
             .Include(a => a.Subject)
+            .Include(a => a.CreatedByTeacher)
             .AsNoTracking()
             .FirstOrDefaultAsync(a => a.Id == id, cancellationToken);
 
@@ -96,7 +98,15 @@ public sealed class AssignmentRepository : IAssignmentRepository
             scoped = scoped.Where(a => a.Status == status);
         }
 
-        return ApplySort(scoped.Include(a => a.Class).Include(a => a.Subject).AsNoTracking(), pagination);
+        // CreatedByTeacher joins here as well as in the two by-id reads: every list row names the teacher
+        // who set the work, and looking that up per row afterwards is the N+1 this Include exists to avoid.
+        return ApplySort(
+            scoped
+                .Include(a => a.Class)
+                .Include(a => a.Subject)
+                .Include(a => a.CreatedByTeacher)
+                .AsNoTracking(),
+            pagination);
     }
 
     // An allow-list, not reflection over the raw sortBy string: an arbitrary property name from the

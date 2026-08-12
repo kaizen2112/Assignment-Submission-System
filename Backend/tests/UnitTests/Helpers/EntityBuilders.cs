@@ -39,9 +39,10 @@ internal static class EntityBuilders
     // Defaults to Published, because that is the state most rules operate on. Pass
     // status: AssignmentStatus.Draft for the rule-6 cases.
     //
-    // The Class and Subject navigations are always wired, since AssignmentService.ToResponse reads
-    // a.Class.Name and a.Subject.Name on every success path — an unwired assignment throws a
-    // NullReferenceException that looks like a product bug but is a test-setup bug.
+    // The Class, Subject and CreatedByTeacher navigations are always wired, since
+    // AssignmentService.ToResponse reads a.Class.Name, a.Subject.Name and a.CreatedByTeacher.FullName on
+    // every success path — an unwired assignment throws a NullReferenceException that looks like a product
+    // bug but is a test-setup bug.
     internal static AssignmentEntity Assignment(
         DateTime? deadline = null,
         bool allowLateSubmission = false,
@@ -51,11 +52,15 @@ internal static class EntityBuilders
         Guid? subjectId = null,
         Guid? teacherId = null,
         string title = "Test Assignment",
-        string description = "Test description.")
+        string description = "Test description.",
+        // Pass this when the test asserts on the teacher's *name*. Passing teacherId alone is still the
+        // right call for the ownership rules — see the note below on why the two can disagree.
+        User? createdByTeacher = null)
     {
         var @class = Class();
         var resolvedClassId = classId ?? @class.Id;
         var subject = Subject(resolvedClassId);
+        var teacher = createdByTeacher ?? Teacher();
 
         var assignment = AssignmentEntity.Create(
             title,
@@ -64,7 +69,11 @@ internal static class EntityBuilders
             maxMarks,
             resolvedClassId,
             subjectId ?? subject.Id,
-            teacherId ?? Guid.NewGuid(),
+            // teacherId wins when given, because most tests pass one to make an ownership check pass or
+            // fail. User.Create mints its own id, so there is no way to build a User *with* that id — the
+            // wired navigation is then a stand-in that exists only to satisfy the name lookup, and
+            // CreatedByTeacherId is the field every rule is actually decided on.
+            teacherId ?? teacher.Id,
             allowLateSubmission);
 
         if (status == AssignmentStatus.Published)
@@ -74,6 +83,7 @@ internal static class EntityBuilders
 
         assignment.Class = @class;
         assignment.Subject = subject;
+        assignment.CreatedByTeacher = teacher;
 
         return assignment;
     }
@@ -180,6 +190,11 @@ internal static class EntityBuilders
 
         assignment.Class = @class;
         assignment.Subject = subject;
+
+        // Unlike the Assignment builder above, this graph has a real teacher whose id the assignment was
+        // actually created with — so here the navigation and CreatedByTeacherId genuinely agree, and a test
+        // asserting on the teacher's name can trust it.
+        assignment.CreatedByTeacher = teacher;
 
         var submission = Submission(assignment, student.Id, submissionStatus, student: student);
 

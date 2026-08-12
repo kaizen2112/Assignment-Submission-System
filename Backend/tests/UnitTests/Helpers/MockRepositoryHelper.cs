@@ -219,6 +219,22 @@ internal static class MockRepositoryHelper
         return mock;
     }
 
+    // The student's own view of the same rows WithClassStudents arranges. Matched on studentId for the same
+    // reason: an It.IsAny setup would return one student's enrolments for every caller, which is precisely
+    // the bug this endpoint must not have.
+    internal static Mock<IClassRepository> WithStudentEnrollments(
+        this Mock<IClassRepository> mock,
+        Guid studentId,
+        params StudentEnrollment[] enrollments)
+    {
+        mock.Setup(r => r.GetStudentEnrollmentsPagedAsync(
+                studentId, It.IsAny<PaginationQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PagedResult<StudentEnrollment>(
+                enrollments, 1, PaginationQuery.DefaultPageSize, enrollments.Length));
+
+        return mock;
+    }
+
     // --- Users ----------------------------------------------------------------------------------
 
     internal static Mock<IUserRepository> UsersWith(params User[] users)

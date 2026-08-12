@@ -205,6 +205,22 @@ public sealed class RoleGuardTests
     }
 
     // =============================================================================================
+    // ClassesController — a student's own enrolments, and nobody else's
+    // =============================================================================================
+
+    [Fact]
+    public void ClassesController_Mine_IsStudentOnly()
+    {
+        var roles = RequiredRoles(typeof(ClassesController).GetMethod(nameof(ClassesController.GetMine))!);
+
+        // Student alone, and the other two roles are excluded for different reasons. A teacher's
+        // equivalent question is answered by their teaching scope; an admin reads a class roster
+        // class-by-class. Neither has enrolments of their own, so "mine" would be an empty page that
+        // looks like an answer.
+        roles.Should().BeEquivalentTo([Student]);
+    }
+
+    // =============================================================================================
     // NoToken_HitsAnyEndpoint_Returns401 — nothing is anonymous except login and refresh
     // =============================================================================================
 
@@ -220,7 +236,7 @@ public sealed class RoleGuardTests
         {
             typeof(AuthController), typeof(AssignmentsController),
             typeof(SubmissionsController), typeof(AdminController),
-            typeof(CommentsController)
+            typeof(CommentsController), typeof(ClassesController)
         };
 
         var anonymous = new List<string>();
@@ -253,7 +269,7 @@ public sealed class RoleGuardTests
         {
             typeof(AuthController), typeof(AssignmentsController),
             typeof(SubmissionsController), typeof(AdminController),
-            typeof(CommentsController)
+            typeof(CommentsController), typeof(ClassesController)
         };
 
         foreach (var controller in controllers)
@@ -289,7 +305,7 @@ public sealed class RoleGuardTests
             CurrentUser = MockRepositoryHelper.AnonymousUser()
         };
         var service = new AssignmentService(
-            mocks.Assignments.Object, mocks.Classes.Object, mocks.CurrentUser.Object);
+            mocks.Assignments.Object, mocks.Classes.Object, mocks.Users.Object, mocks.CurrentUser.Object);
 
         // Act
         var list = await service.GetPagedAsync(new AssignmentQueryParameters(), CancellationToken.None);

@@ -12,9 +12,14 @@ import { useSession } from "@/components/layout/SessionContext";
 export function WelcomeHeader({
   subtitle,
   action,
+  // An extra line below the subtitle — the student dashboard puts their enrolled classes here. A slot
+  // rather than a `classes` prop, so this stays the shared header for all three roles instead of one that
+  // knows about enrolment.
+  meta,
 }: {
   subtitle: string;
   action?: ReactNode;
+  meta?: ReactNode;
 }) {
   const profile = useSession();
 
@@ -25,6 +30,8 @@ export function WelcomeHeader({
           {profile ? `Welcome back, ${profile.fullName}` : "Welcome back"}
         </h1>
         <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">{subtitle}</p>
+
+        {meta && <div className="mt-3">{meta}</div>}
       </div>
 
       {action && <div className="shrink-0">{action}</div>}
