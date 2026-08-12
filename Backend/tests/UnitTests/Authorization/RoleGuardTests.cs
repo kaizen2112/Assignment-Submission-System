@@ -162,18 +162,65 @@ public sealed class RoleGuardTests
     }
 
     // =============================================================================================
+    // CommentsController — the role matrix, including the one action that deliberately has no Roles
+    // =============================================================================================
+
+    [Theory]
+    [InlineData(nameof(CommentsController.Create))]
+    [InlineData(nameof(CommentsController.Reply))]
+    [InlineData(nameof(CommentsController.ToggleUpvote))]
+    public void AdminRole_CannotPostComments(string actionName)
+    {
+        var roles = RequiredRoles(typeof(CommentsController).GetMethod(actionName)!);
+
+        // A6: an admin observes coursework, they do not take part in it. Writing to a subject thread is
+        // a participant's action, and an admin holds no teaching scope to moderate the result.
+        roles.Should().BeEquivalentTo([Teacher, Student], $"{actionName} is for participants only");
+    }
+
+    [Fact]
+    public void CommentsController_Read_IsOpenToAllThreeRoles()
+    {
+        var roles = RequiredRoles(typeof(CommentsController).GetMethod(nameof(CommentsController.GetForAssignment))!);
+
+        // Admin included, because oversight means being able to read a thread. The service still scopes
+        // it: a student sees threads only on published assignments in their own classes.
+        roles.Should().BeEquivalentTo([Teacher, Student, Admin]);
+    }
+
+    [Fact]
+    public void CommentsController_Delete_IsAuthenticatedButNotRoleScoped()
+    {
+        var roles = RequiredRoles(typeof(CommentsController).GetMethod(nameof(CommentsController.Delete))!);
+
+        // The one endpoint in the system with no Roles, and it is intentional — do not "fix" it.
+        // "The author, or the teacher who holds this class+subject" is not a role: a student may delete
+        // their own comment but not a peer's, which no [Authorize(Roles)] can express. Empty here means
+        // "authenticated, any role", and CommentService.DeleteAsync makes the actual decision — see
+        // CommentServiceTests.DeleteAsync_OtherStudentComment_ReturnsFailure for the proof that it does.
+        roles.Should().BeEmpty("author-or-owning-teacher is a data question, not a role question");
+
+        // But it must still require a token. An empty array and a null are very different answers.
+        roles.Should().NotBeNull();
+    }
+
+    // =============================================================================================
     // NoToken_HitsAnyEndpoint_Returns401 — nothing is anonymous except login and refresh
     // =============================================================================================
 
     [Fact]
     public void NoToken_HitsAnyEndpoint_Returns401()
     {
-        // Every action across all four controllers must sit behind [Authorize]. Anything that does not
-        // would answer an anonymous caller with data instead of 401.
+        // Every action across every controller must sit behind [Authorize]. Anything that does not would
+        // answer an anonymous caller with data instead of 401.
+        //
+        // A new controller has to be added here by hand, which is the point: this list is the checklist,
+        // and a controller missing from it is a controller nobody proved was guarded.
         var controllers = new[]
         {
             typeof(AuthController), typeof(AssignmentsController),
-            typeof(SubmissionsController), typeof(AdminController)
+            typeof(SubmissionsController), typeof(AdminController),
+            typeof(CommentsController)
         };
 
         var anonymous = new List<string>();
@@ -205,7 +252,8 @@ public sealed class RoleGuardTests
         var controllers = new[]
         {
             typeof(AuthController), typeof(AssignmentsController),
-            typeof(SubmissionsController), typeof(AdminController)
+            typeof(SubmissionsController), typeof(AdminController),
+            typeof(CommentsController)
         };
 
         foreach (var controller in controllers)

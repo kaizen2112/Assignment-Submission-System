@@ -3,6 +3,7 @@ using System;
 using AssignmentSystem.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AssignmentSystem.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260812105609_AddComments")]
+    partial class AddComments
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -137,16 +140,11 @@ namespace AssignmentSystem.Infrastructure.Migrations
                     b.Property<Guid?>("ParentCommentId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("ReplyToCommentId")
-                        .HasColumnType("uuid");
-
                     b.HasKey("Id");
 
                     b.HasIndex("AuthorId");
 
                     b.HasIndex("ParentCommentId");
-
-                    b.HasIndex("ReplyToCommentId");
 
                     b.HasIndex("AssignmentId", "CreatedAt");
 
@@ -426,16 +424,9 @@ namespace AssignmentSystem.Infrastructure.Migrations
                         .HasForeignKey("ParentCommentId")
                         .OnDelete(DeleteBehavior.Cascade);
 
-                    b.HasOne("AssignmentSystem.Domain.Entities.Comment", "ReplyTo")
-                        .WithMany()
-                        .HasForeignKey("ReplyToCommentId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
                     b.Navigation("Author");
 
                     b.Navigation("ParentComment");
-
-                    b.Navigation("ReplyTo");
                 });
 
             modelBuilder.Entity("AssignmentSystem.Domain.Entities.CommentUpvote", b =>

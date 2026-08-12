@@ -20,6 +20,8 @@ public sealed class AppDbContext : DbContext
     public DbSet<Assignment> Assignments => Set<Assignment>();
     public DbSet<Submission> Submissions => Set<Submission>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<Comment> Comments => Set<Comment>();
+    public DbSet<CommentUpvote> CommentUpvotes => Set<CommentUpvote>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

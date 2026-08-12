@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Award, CalendarClock, FileText, Target, Timer } from "lucide-react";
+import { CommentSection } from "@/components/comments/CommentSection";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { SubmissionForm } from "@/components/student/SubmissionForm";
 import { Alert } from "@/components/ui/Alert";
@@ -243,6 +244,10 @@ export default function StudentAssignmentDetailPage() {
             </div>
           )}
         </Card>
+
+        {/* Last in the column, the way a discussion sits under an article. Above the submission form it
+            would put other people's chatter between the student and the thing they came to do. */}
+        <CommentSection assignmentId={assignment.id} />
       </div>
     </>
   );

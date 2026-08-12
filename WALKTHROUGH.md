@@ -939,8 +939,45 @@ Seed data is small, so create some volume first — or just check the mechanics 
       which is the point — the page body never moves sideways. (Getting this wrong is the most common
       responsive bug: a grid item defaults to `min-width: auto`, so a card holding a table refuses to
       shrink and pushes the whole page wide. `min-w-0` on `Section` is what prevents it.)
-- [ ] **Expect:** row action icons are **permanently visible** here, not hover-revealed — a touch screen
-      has no hover, so hiding them behind one would make them unreachable.
+- [ ] **Expect:** row action icons are at **full strength** here rather than dimmed — a touch screen has
+      no hover, so a faded control would just look permanently disabled.
+
+---
+
+### 7.8 Dark mode
+
+- [ ] **Do:** click the **moon icon** in the top bar, left of your name.
+- [ ] **Expect:** the whole app switches theme in one step — page, cards, tables, form fields, badges and
+      the sidebar. No element stays light. Status chips are still colour-coded and still readable (every
+      tone measures above the 4.5:1 contrast minimum).
+- [ ] **Do:** press **F5** to reload.
+- [ ] **Expect:** it comes back dark, **with no white flash** while loading. The theme is applied by a
+      script in `<head>` that runs while the HTML is still being parsed — earlier than React exists, and
+      earlier than there is anything on screen to flash. Reload a few times to convince yourself.
+- [ ] **Do:** if your OS is set to dark mode, open the app in a fresh private window.
+- [ ] **Expect:** it starts dark without you touching the toggle. With no saved preference it follows the
+      system setting; once you click the toggle, your choice wins from then on.
+- [ ] **Note:** the sidebar gets *darker* in dark mode, not lighter. The layout depends on the navigation
+      reading as chrome and the content as data, so the sidebar stays the darkest surface in both themes.
+
+### 7.9 Motion
+
+- [ ] **Do:** click between sidebar items and watch the page body.
+- [ ] **Expect:** each page **fades and rises** into place over about 200ms — enough to feel like it
+      landed, not enough to wait for. The sidebar and top bar do **not** animate: chrome that faded on
+      every click would be exhausting.
+- [ ] **Expect:** the highlight pill in the sidebar **slides** from the old item to the new one rather
+      than blinking off and on. It is one element shared across all the nav links.
+- [ ] **Expect:** a thin **indigo bar** sweeps the top of the window during navigation. That is not
+      decoration — a route that waits on the server renders nothing until it resolves, so without it a
+      click looks like it did nothing.
+- [ ] **Do:** press and hold any button.
+- [ ] **Expect:** it dips very slightly (2%) while held, and springs back. Try it with the keyboard too —
+      Tab to a button and hold **Enter**; the same dip should happen.
+- [ ] **Do (optional):** turn on your OS "reduce motion" setting and reload.
+- [ ] **Expect:** all of the above stops — no fade, no slide, no dip. Colours still change on hover. This
+      needs two separate mechanisms, because the CSS media query is invisible to the JavaScript
+      animations, and vice versa.
 
 ---
 

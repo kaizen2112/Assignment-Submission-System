@@ -229,6 +229,48 @@ export interface UserQuery extends PagedQuery {
   search?: string;
 }
 
+// --- Comments -----------------------------------------------------------------------------------
+
+// The thread is two levels deep, so `replies` is always present and always empty on a reply itself.
+// Mirrors CommentResponse in the API.
+//
+// Two levels is about the *rows*, not the conversation: replying to a reply is allowed and comes back as
+// another entry in the same `replies` array, with `replyToAuthorName` set. The @mention is what carries
+// "this answers you" once there is no third indent to say it.
+//
+// Note what the server withholds rather than what it sends: on a deleted comment both `content` and
+// `authorName` arrive as empty strings. The row is here only so its replies stay reachable, and the
+// placeholder is rendered from `isDeleted` — there is nothing to un-hide, because nothing was sent.
+export interface Comment {
+  id: string;
+  content: string;
+  authorId: string;
+  authorName: string;
+  createdAt: string;
+  upvoteCount: number;
+  // Per-caller, not per-row: whether *you* have upvoted this one.
+  hasUpvoted: boolean;
+  isDeleted: boolean;
+  // Both null unless this reply answered another reply — and both null again if that comment has since
+  // been deleted, since a tombstone does not record who was removed from the thread.
+  replyToCommentId: string | null;
+  replyToAuthorName: string | null;
+  replies: Comment[];
+}
+
+export interface CreateCommentRequest {
+  content: string;
+}
+
+// The toggle endpoint returns only what can have changed, so an optimistic update has something exact
+// to reconcile against.
+export interface UpvoteResult {
+  upvoteCount: number;
+  hasUpvoted: boolean;
+}
+
+export const COMMENT_MAX_LENGTH = 1000;
+
 // --- Errors (RFC 7807, produced by ResultExtensions + ValidationProblems) ------------------------
 
 export interface ProblemDetails {

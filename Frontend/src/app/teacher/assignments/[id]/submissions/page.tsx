@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Eye, Inbox, PenLine } from "lucide-react";
+import { CommentSection } from "@/components/comments/CommentSection";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Alert } from "@/components/ui/Alert";
 import { Avatar } from "@/components/ui/Avatar";
@@ -174,6 +175,13 @@ export default function AssignmentSubmissionsPage() {
           {data && <Pagination result={data} onPageChange={setPage} disabled={loading} />}
         </div>
       )}
+
+      {/* Outside the empty/table branch above on purpose: an assignment with no submissions still has a
+          discussion, and a draft is exactly when a teacher is most likely to be answering questions
+          about it. Putting this inside the else-branch would hide the thread precisely then. */}
+      <div className="mt-6">
+        <CommentSection assignmentId={id} />
+      </div>
     </>
   );
 }

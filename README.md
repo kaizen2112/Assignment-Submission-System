@@ -37,6 +37,16 @@ frontend is treated as untrusted. Hiding a button is presentation; returning `40
 - **Deadline enforcement** with an opt-in per-assignment late-submission flag.
 - **Grading** with marks validated against each assignment's own `MaxMarks`, plus written feedback.
 - **A submission status state machine** that refuses invalid transitions, including un-grading.
+- **Threaded comments with upvotes** on each assignment — anyone can reply to anyone, with a reply to a
+  reply shown as a sibling prefixed by an `@mention` rather than a deeper indent, so the stored thread
+  stays two levels and the text never narrows. One vote per person per comment, and soft deletion that
+  keeps a deleted comment's replies readable behind a placeholder.
+  Moderation is the author or the teacher who holds that class + subject, which is the one permission in
+  the system that no role attribute can express — so `DELETE` is the only endpoint with no role attribute,
+  and the service decides. A thread inherits its assignment's visibility exactly: a draft has no thread
+  for a student, an unenrolled class has none either, and a teacher without the class + subject grant is
+  refused. No comment path contains its own visibility logic; each one calls the same scoped queries the
+  assignment endpoints use.
 - **Pagination on every list endpoint**, with an oversized `pageSize` rejected rather than clamped.
 - **Consistent error shape** — one `ProblemDetails`-style body for validation failures, business-rule
   failures and framework model-binding failures alike.
@@ -48,11 +58,11 @@ frontend is treated as untrusted. Hiding a button is presentation; returning `40
 - **One design system, not per-page styling** — a 17-component `components/ui` layer owns every card,
   chip, table, skeleton and empty state, so the status-colour map and the type scale exist in exactly one
   place each. Every list has a skeleton loader, every empty result an explanation, every status a coloured
-  chip; the layout is responsive down to 390px with an off-canvas drawer. See
-  [docs/07_frontend.md](docs/07_frontend.md#design-system).
+  chip; the layout is responsive down to 390px with an off-canvas drawer, and there is a light/dark theme
+  that resolves before first paint.
 - **Swagger UI** with a working **Authorize** button, so every endpoint can be exercised from a
   browser.
-- **85 unit tests** covering all 8 business rules and the role guards.
+- **113 unit tests** covering all 8 business rules, the comment rules C1–C5, and the role guards.
 - **One-command Docker setup** and **GitHub Actions CI** on every push.
 
 ---
@@ -215,8 +225,10 @@ sequenceDiagram
 | Next.js | **16.3.0** (App Router, Turbopack) |
 | React | 19.2.8 |
 | TypeScript | 5.9.3 (strict, no `any`) |
-| Tailwind CSS | 4.3.3 (configured in CSS via `@theme` — there is no `tailwind.config.js`) |
-| lucide-react | 1.31.0 (icons; the only UI dependency) |
+| Tailwind CSS | 4.3.3 (configured in CSS via `@theme` — there is no `tailwind.config.js`; dark mode is a `@custom-variant`, not a `darkMode` key) |
+| lucide-react | 1.31.0 (icons) |
+| framer-motion | 13.1.0 (page enter transition; the sliding sidebar pill) |
+| nextjs-toploader | 3.9.17 (the 2px indigo navigation progress bar) |
 | react-hook-form | 7.85.0 |
 | Zod | 4.4.3 |
 | @hookform/resolvers | 5.7.1 |
@@ -801,7 +813,7 @@ rule 1 lets it in, rule 2 immediately locks it.
 
 The brief left these open. Each was resolved in the direction that keeps the system's guarantees
 strict rather than convenient. A1–A7 are the assumptions recorded during design; A8–A13 emerged
-while implementing.
+while implementing; A14–A16 come from the comment feature.
 
 | # | Assumption | Why |
 |---|---|---|
@@ -818,6 +830,9 @@ while implementing.
 | **A11** | **An overdue assignment stays editable, as long as the deadline is not changed.** A *new* deadline must be in the future. | A teacher can fix a typo in last week's homework, but back-dating a deadline would retroactively lock out students who still had time. |
 | **A12** | **An assignment's class and subject are fixed once created** — `PUT` accepts neither field. | Moving it would re-scope it under students who had already submitted. Re-create instead. |
 | **A13** | **A teacher sees only assignments they created**, in both the list and the single-item view; a colleague's returns 404. | Editing and grading are already restricted to your own work, so a broader read view would only expose other teachers' unpublished drafts. |
+| **A14** | **Comments cannot be edited, and there are no real-time updates.** Post, reply, upvote and delete; no edit, and a second reader sees a new comment on their next load. | Editing would need a revision history to be honest about — an edited question with an answer under it silently rewrites the exchange. Live updates would need SignalR or polling, which is infrastructure this feature does not justify. |
+| **A15** | **Any comment can be replied to, but the stored thread stays two levels deep.** A reply to a reply is saved against the same top-level comment and shown as a sibling prefixed with an `@mention` of the person it answers. | `ParentCommentId` is a self-reference, so the schema permits unbounded nesting. Normalising instead of nesting keeps the read a single non-recursive query and stops the text column narrowing with every exchange — while the mention says "this answers you" outright, which is the one thing a third indent would have conveyed. The addressee is a foreign key, never an `@Name` typed into the text: a name in the text stops being true when the account is renamed, and can be faked by hand. |
+| **A16** | **An admin reads comment threads but cannot post to, or moderate, them.** | An admin holds no teaching scope, and moderating a subject's discussion is a participant's action — the same reasoning as A6. |
 
 ---
 
