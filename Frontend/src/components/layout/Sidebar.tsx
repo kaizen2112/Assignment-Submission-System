@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
@@ -14,6 +15,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
+import { SidebarClasses } from "@/components/layout/SidebarClasses";
 import { useSession } from "@/components/layout/SessionContext";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/types/api";
@@ -71,7 +73,10 @@ export function Sidebar({ role }: { role: Role }) {
 
   return (
     <div className="flex h-full flex-col bg-slate-900 dark:bg-gray-950">
-      <nav aria-label="Main navigation" className="flex flex-1 flex-col gap-1 p-3">
+      <nav
+        aria-label="Main navigation"
+        className="flex flex-1 flex-col gap-1 overflow-y-auto p-3"
+      >
         {items.map((item) => {
           // startsWith, not equality, so /teacher/assignments/123 keeps "Assignments" highlighted.
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -120,6 +125,18 @@ export function Sidebar({ role }: { role: Role }) {
             </Link>
           );
         })}
+
+        {/* Below the fixed nav, and scrollable with it: a teacher with eight classes must not push their own
+            identity card off the bottom of the screen, which is why the <nav> is the flex-1 scroller and the
+            footer below is not.
+
+            Wrapped in Suspense because the teacher tree reads useSearchParams to highlight the active
+            subject, and this sidebar renders inside the layout of every authenticated page. Without a
+            boundary that turns a prerenderable page into a build error — a failure that never shows up in
+            `next dev`, only in `next build`, which is what the Docker web image runs. */}
+        <Suspense fallback={null}>
+          <SidebarClasses role={role} />
+        </Suspense>
       </nav>
 
       {/* Identity at the foot of the navigation, the convention in every tool people already use. The top

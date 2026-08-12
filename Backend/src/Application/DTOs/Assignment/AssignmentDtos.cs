@@ -47,7 +47,12 @@ public sealed record AssignmentResponse(
     // an admin may list users.
     string CreatedByTeacherName,
     DateTime CreatedAt,
-    DateTime UpdatedAt);
+    DateTime UpdatedAt,
+    // How much of the class has handed in. **Null for a student caller**, and null server-side rather than
+    // merely hidden by the UI: the count of who else has submitted is information about a student's
+    // classmates, and sending it down to be hidden puts it one network-tab click away. Same reasoning as
+    // the blanked fields on a deleted comment.
+    CompletionStats? Completion = null);
 
 // Description is omitted deliberately: it holds up to 5000 characters, and a 100-item page would
 // otherwise ship half a megabyte of text no list screen displays.
@@ -68,7 +73,9 @@ public sealed record AssignmentListItemResponse(
     // request into N — the same reason Description is left out above.
     Guid CreatedByTeacherId,
     string CreatedByTeacherName,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    // As above: populated for a teacher or an admin, null for a student.
+    CompletionStats? Completion = null);
 
 // What a teacher is allowed to create an assignment for: one row per class+subject pair they hold.
 // Flat rather than nested (a class with its subjects inside) because the create form needs to pick a

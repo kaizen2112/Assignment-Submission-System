@@ -32,6 +32,12 @@ export const updateAssignment = (id: string, body: UpdateAssignmentRequest) =>
 export const publishAssignment = (id: string) =>
   api.patch<Assignment>(`/assignments/${id}/publish`);
 
+// POST, because it creates a new assignment rather than changing this one — the original is untouched and
+// the response is the copy. Always a Draft with a placeholder deadline a week out, which is why callers send
+// the teacher to the edit form afterwards.
+export const duplicateAssignment = (id: string) =>
+  api.post<Assignment>(`/assignments/${id}/duplicate`);
+
 // 409 when the assignment already has submissions — assumption A5. Deleting would cascade and destroy
 // graded student work, so the API refuses rather than doing it quietly.
 export const deleteAssignment = (id: string) => api.delete(`/assignments/${id}`);

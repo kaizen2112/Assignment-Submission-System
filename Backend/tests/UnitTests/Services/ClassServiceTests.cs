@@ -128,6 +128,84 @@ public sealed class ClassServiceTests
         result.ErrorType.Should().Be(ErrorType.Unauthorized);
     }
 
+    // =============================================================================================
+    // CLASSMATES — the roster of a class the caller is actually in
+    // =============================================================================================
+
+    [Fact]
+    public async Task GetClassmatesAsync_EnrolledStudent_ReturnsTheRosterIncludingThemselves()
+    {
+        var me = EntityBuilders.Student("Nadia Islam", "nadia@test.com");
+        var peer = EntityBuilders.Student("Rafid Karim", "rafid@test.com");
+        var tenA = EntityBuilders.Class();
+
+        var classes = MockRepositoryHelper.Classes()
+            .WithEnrollment(me.Id, tenA.Id)
+            .WithClassStudents(
+                tenA.Id,
+                EntityBuilders.Enrollment(me, tenA),
+                EntityBuilders.Enrollment(peer, tenA));
+
+        var result = await new ClassService(
+                classes.Object,
+                MockRepositoryHelper.CurrentUser(me.Id, Role.Student).Object)
+            .GetClassmatesAsync(tenA.Id, new PagedQueryParameters(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Items.Should().HaveCount(2);
+
+        // The caller is in the list, flagged rather than filtered out — a roster with a hole where you should
+        // be reads as a bug, and the count then disagrees with what a teacher sees.
+        result.Value.Items.Single(c => c.Id == me.Id).IsYou.Should().BeTrue();
+        result.Value.Items.Single(c => c.Id == peer.Id).IsYou.Should().BeFalse();
+        result.Value.Items.Single(c => c.Id == peer.Id).FullName.Should().Be("Rafid Karim");
+    }
+
+    [Fact]
+    public async Task GetClassmatesAsync_ClassTheStudentIsNotEnrolledIn_ReturnsNotFoundWithoutReadingIt()
+    {
+        // 404, not 403: a 403 would confirm the class exists (A7). And the roster must not be fetched at all
+        // — a service that read the rows and refused afterwards would have somebody else's class in memory
+        // next to the refusal.
+        var outsider = EntityBuilders.Student();
+        var someoneElsesClass = EntityBuilders.Class("Class 9 - B", "9B");
+
+        var classes = MockRepositoryHelper.Classes()
+            .WithClassStudents(someoneElsesClass.Id, EntityBuilders.Enrollment(
+                EntityBuilders.Student("Insider", "insider@test.com"), someoneElsesClass));
+
+        var result = await new ClassService(
+                classes.Object,
+                MockRepositoryHelper.CurrentUser(outsider.Id, Role.Student).Object)
+            .GetClassmatesAsync(someoneElsesClass.Id, new PagedQueryParameters(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorType.Should().Be(ErrorType.NotFound);
+
+        classes.Verify(
+            r => r.GetClassEnrollmentsPagedAsync(
+                It.IsAny<Guid>(), It.IsAny<PaginationQuery>(), It.IsAny<CancellationToken>()),
+            Times.Never());
+    }
+
+    [Theory]
+    [InlineData(Role.Teacher)]
+    [InlineData(Role.Admin)]
+    public async Task GetClassmatesAsync_NonStudent_ReturnsForbidden(Role role)
+    {
+        // A teacher reads a roster through their own screens and an admin through /admin/classes/{id}/students.
+        // Neither has classmates, so this route is not theirs.
+        var classes = MockRepositoryHelper.Classes();
+
+        var result = await new ClassService(
+                classes.Object,
+                MockRepositoryHelper.CurrentUser(Guid.NewGuid(), role).Object)
+            .GetClassmatesAsync(Guid.NewGuid(), new PagedQueryParameters(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorType.Should().Be(ErrorType.Forbidden);
+    }
+
     [Fact]
     public async Task GetMyClassesAsync_OversizedPageSize_ReturnsValidationFailure()
     {

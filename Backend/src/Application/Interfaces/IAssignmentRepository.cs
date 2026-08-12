@@ -1,4 +1,5 @@
 using AssignmentSystem.Application.Common;
+using AssignmentSystem.Application.DTOs.Assignment;
 using AssignmentSystem.Domain.Entities;
 
 namespace AssignmentSystem.Application.Interfaces;
@@ -41,6 +42,28 @@ public interface IAssignmentRepository
     // Assumption A5: an assignment with submissions cannot be deleted. Checked explicitly so the
     // service can return a readable 409, instead of letting the FK surface as a DbUpdateException.
     Task<bool> HasSubmissionsAsync(Guid assignmentId, CancellationToken cancellationToken = default);
+
+    // --- Completion --------------------------------------------------------------------------------
+
+    // "How many of the enrolled students have handed this in." Two counts, both from SQL: enrolments in
+    // the assignment's class, and submissions against the assignment.
+    //
+    // Returns counts and not a percentage on purpose — CompletionStats derives that, where a unit test can
+    // reach the arithmetic and where the zero-enrolment case is decided in code rather than by the
+    // database. See the note on CompletionStats.Percentage.
+    Task<CompletionStats> GetCompletionStatsAsync(
+        Guid assignmentId,
+        CancellationToken cancellationToken = default);
+
+    // The same figures for a whole page of assignments, which is why this overload exists rather than the
+    // list path calling the single one per row: that would be one pair of counts per assignment, an N+1 on
+    // the busiest teacher screen in the app. This runs a fixed three queries whatever the page size.
+    //
+    // Assignments with no matching row come back with zeroes rather than being absent, so a caller never
+    // has to decide what a missing key means.
+    Task<IReadOnlyDictionary<Guid, CompletionStats>> GetCompletionStatsAsync(
+        IReadOnlyCollection<Guid> assignmentIds,
+        CancellationToken cancellationToken = default);
 
     Task AddAsync(Assignment assignment, CancellationToken cancellationToken = default);
 

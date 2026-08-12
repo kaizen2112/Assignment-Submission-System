@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { FormProvider, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Lock, Save, Upload } from "lucide-react";
@@ -25,6 +25,12 @@ export default function EditAssignmentPage() {
   // useParams rather than a page prop: this is a client component, and Next 16's page props deliver
   // params as a Promise that a client component cannot await during render.
   const { id } = useParams<{ id: string }>();
+
+  // Set by the duplicate action on the assignments list. The message belongs here rather than in a toast on
+  // the page that fired it: a toast racing a navigation either unmounts mid-flight or expires while the
+  // teacher is still reading the form, and what it has to say — "set the deadline before publishing" — is
+  // about *this* screen. Shown on the page where the work gets done, it survives as long as it is relevant.
+  const justDuplicated = useSearchParams().get("duplicated") === "1";
 
   const [formError, setFormError] = useState<string | null>(null);
   const [publishing, setPublishing] = useState(false);
@@ -166,6 +172,14 @@ export default function EditAssignmentPage() {
       />
 
       {formError && <Alert className="mb-6">{formError}</Alert>}
+
+      {/* First, because it explains why the teacher is on this page at all. */}
+      {justDuplicated && (
+        <Alert tone="success" className="mb-6">
+          Assignment duplicated — update the deadline before publishing. The copy is a draft with a
+          placeholder deadline one week from now, so students cannot see it yet.
+        </Alert>
+      )}
 
       {/* Editing a published assignment changes what students already see, which is worth saying out
           loud. It is allowed — the API permits it — but it should not be a surprise. */}

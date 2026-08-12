@@ -54,6 +54,56 @@ public sealed class ClassService : IClassService
             new EnrolledClassResponse(e.ClassId, e.Class.Name, e.Class.Code, e.EnrolledAt)));
     }
 
+    public async Task<Result<PagedResult<ClassmateResponse>>> GetClassmatesAsync(
+        Guid classId,
+        PagedQueryParameters query,
+        CancellationToken cancellationToken = default)
+    {
+        if (_currentUser.UserId is not { } studentId ||
+            !Enum.TryParse<Role>(_currentUser.Role, ignoreCase: false, out var role))
+        {
+            return Result<PagedResult<ClassmateResponse>>.Failure(
+                "Not authenticated.", ErrorType.Unauthorized);
+        }
+
+        if (role != Role.Student)
+        {
+            return Result<PagedResult<ClassmateResponse>>.Failure(
+                "Only a student has classmates.", ErrorType.Forbidden);
+        }
+
+        var pagination = query.ToPagination();
+
+        var check = pagination.Validate();
+        if (!check.IsSuccess)
+        {
+            return Result<PagedResult<ClassmateResponse>>.Failure(check.Error!, check.ErrorType);
+        }
+
+        // The gate. Unlike GetMyClassesAsync, this takes a class id, so the id has to be *earned* rather than
+        // trusted — a student not enrolled here gets 404 and learns nothing about whether the class exists
+        // (assumption A7, the same reasoning as an unenrolled student reading an assignment).
+        //
+        // Checked before the roster is fetched, not after: a service that read the rows and then decided
+        // would have the whole roster in memory beside a refusal.
+        if (!await _classes.EnrollmentExistsAsync(studentId, classId, cancellationToken))
+        {
+            return Result<PagedResult<ClassmateResponse>>.Failure(
+                "Class not found.", ErrorType.NotFound);
+        }
+
+        var page = await _classes.GetClassEnrollmentsPagedAsync(classId, pagination, cancellationToken);
+
+        // The caller is included rather than filtered out. A roster with a hole where you should be reads as
+        // a bug, and "(you)" is more use than an absence — it also lets the count match what a teacher sees.
+        return Result<PagedResult<ClassmateResponse>>.Success(page.Map(e =>
+            new ClassmateResponse(
+                e.StudentId,
+                e.Student.FullName,
+                e.Student.Email,
+                IsYou: e.StudentId == studentId)));
+    }
+
     private static Result<PagedResult<EnrolledClassResponse>> Fail(string error, ErrorType errorType) =>
         Result<PagedResult<EnrolledClassResponse>>.Failure(error, errorType);
 }

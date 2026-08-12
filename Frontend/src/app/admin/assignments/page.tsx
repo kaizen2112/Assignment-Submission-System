@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { ClipboardList } from "lucide-react";
+import { CompletionText } from "@/components/teacher/Completion";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Alert } from "@/components/ui/Alert";
 import { AssignmentStatusBadge, Badge } from "@/components/ui/Badge";
@@ -24,7 +25,7 @@ import { listAllAssignments, listAllClasses } from "@/lib/admin";
 import { DEFAULT_PAGE_SIZE } from "@/types/api";
 import type { AssignmentStatus } from "@/types/api";
 
-const COLUMNS = 5;
+const COLUMNS = 6;
 
 // Read-only by design. An admin can see every teacher's work, including drafts — this is the only
 // endpoint in the API that returns those — but editing someone else's assignment is a teacher-scoped
@@ -121,6 +122,7 @@ export default function AdminAssignmentsPage() {
                 <TH>Title</TH>
                 <TH>Class / Subject</TH>
                 <TH>Status</TH>
+                <TH>Submitted</TH>
                 <TH>Deadline</TH>
                 <TH align="right">Max marks</TH>
               </TR>
@@ -144,6 +146,17 @@ export default function AdminAssignmentsPage() {
                         <AssignmentStatusBadge status={assignment.status} />
                         {assignment.allowLateSubmission && <Badge tone="info">Late OK</Badge>}
                       </div>
+                    </TD>
+
+                    {/* Oversight, so completion belongs here as much as on the teacher's own list — the API
+                        sends it to an admin for the same reason. A draft reports nothing: it cannot have
+                        submissions (rule 6), and "0 / 18" would read as a class ignoring it. */}
+                    <TD>
+                      {assignment.status === "Draft" ? (
+                        <span className="text-gray-400 dark:text-gray-500">—</span>
+                      ) : (
+                        <CompletionText stats={assignment.completion} />
+                      )}
                     </TD>
 
                     {/* DeadlineLabel already strikes the date through and says "Closed" once it has

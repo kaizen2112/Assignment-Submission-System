@@ -113,6 +113,28 @@ public sealed class AssignmentsController : ControllerBase
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult();
     }
 
+    // POST, and it returns 201: this creates a new assignment. Not PUT (there is no target id to replace)
+    // and not PATCH (nothing about {id} changes — the original is left exactly as it was).
+    //
+    // The copy is always a Draft with a placeholder deadline a week out, so the response is what the client
+    // needs to send the teacher straight to the edit form.
+    [HttpPost("{id:guid}/duplicate")]
+    [Authorize(Roles = Teacher)]
+    [ProducesResponseType(typeof(AssignmentResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Duplicate(Guid id, CancellationToken ct)
+    {
+        // 404 for an id that does not exist or belongs to another teacher; 403 when they own it but no
+        // longer hold the class+subject grant — duplicating creates new work, so it needs the authority to
+        // create, not merely to read.
+        var result = await _assignments.DuplicateAsync(id, ct);
+
+        return result.IsSuccess
+            ? CreatedAtAction(nameof(GetById), new { id = result.Value.Id }, result.Value)
+            : result.ToProblemResult();
+    }
+
     [HttpDelete("{id:guid}")]
     [Authorize(Roles = Teacher)]
     [ProducesResponseType(StatusCodes.Status204NoContent)]

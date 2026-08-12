@@ -37,6 +37,18 @@ frontend is treated as untrusted. Hiding a button is presentation; returning `40
 - **Deadline enforcement** with an opt-in per-assignment late-submission flag.
 - **Grading** with marks validated against each assignment's own `MaxMarks`, plus written feedback.
 - **A submission status state machine** that refuses invalid transitions, including un-grading.
+- **Assignment completion tracking (teacher view)** — every assignment carries "12 / 18 (67%)" on the
+  teacher's and admin's lists and a progress bar on the grading page. **Withheld from students by the
+  server, not hidden by the interface:** how many classmates have submitted is information about other
+  people, so the field is null for a student caller and the query never runs.
+- **Marks distribution summary (teacher grading view)** — highest, average, lowest and pass rate across the
+  graded submissions, derived from rows the page already fetched, so it costs no extra request. It says which
+  submissions it covered rather than implying it covered the whole class.
+- **One-click assignment duplication** — copies the brief, marks, class and subject into a fresh **Draft**
+  with a placeholder deadline a week out, then opens the copy's edit form. Submissions, grades and the
+  comment thread are never copied: they record what particular students did. Duplicating needs the same
+  class + subject authority as creating from scratch, so a teacher moved off a class cannot seed it with a
+  copy of their old work.
 - **Threaded comments with upvotes** on each assignment — anyone can reply to anyone, with a reply to a
   reply shown as a sibling prefixed by an `@mention` rather than a deeper indent, so the stored thread
   stays two levels and the text never narrows. One vote per person per comment, and soft deletion that
@@ -62,7 +74,12 @@ frontend is treated as untrusted. Hiding a button is presentation; returning `40
   that resolves before first paint.
 - **Swagger UI** with a working **Authorize** button, so every endpoint can be exercised from a
   browser.
-- **123 unit tests** covering all 8 business rules, the comment rules C1–C5, and the role guards.
+- **Class navigation per role** — a teacher's sidebar carries a collapsible tree of the classes they teach and
+  the subjects within each, and clicking a subject filters the assignments list through the URL, so the
+  filtered view is shareable. A student sees the classes they are enrolled in and can open the **class
+  roster**: names and emails only, gated on their own enrolment rather than on their role, so another class's
+  roster answers 404 exactly as an unenrolled assignment does.
+- **139 unit tests** covering all 8 business rules, the comment rules C1–C5, and the role guards.
 - **One-command Docker setup** and **GitHub Actions CI** on every push.
 
 ---
@@ -833,6 +850,7 @@ while implementing; A14–A16 come from the comment feature.
 | **A14** | **Comments cannot be edited, and there are no real-time updates.** Post, reply, upvote and delete; no edit, and a second reader sees a new comment on their next load. | Editing would need a revision history to be honest about — an edited question with an answer under it silently rewrites the exchange. Live updates would need SignalR or polling, which is infrastructure this feature does not justify. |
 | **A15** | **Any comment can be replied to, but the stored thread stays two levels deep.** A reply to a reply is saved against the same top-level comment and shown as a sibling prefixed with an `@mention` of the person it answers. | `ParentCommentId` is a self-reference, so the schema permits unbounded nesting. Normalising instead of nesting keeps the read a single non-recursive query and stops the text column narrowing with every exchange — while the mention says "this answers you" outright, which is the one thing a third indent would have conveyed. The addressee is a foreign key, never an `@Name` typed into the text: a name in the text stops being true when the account is renamed, and can be faked by hand. |
 | **A16** | **An admin reads comment threads but cannot post to, or moderate, them.** | An admin holds no teaching scope, and moderating a subject's discussion is a participant's action — the same reasoning as A6. |
+| **A17** | **A student may see the name and email of everyone in a class they are enrolled in, and nothing else about them.** No marks, no submission state, no one else's class. | A class roster is ordinary in a school, and an email address is how classmates reach each other about the work. Anything about performance is a teacher's to see, so the endpoint does not send it — there is nothing for the interface to hide. Access is gated on the caller's own enrolment, not on their role. |
 
 ---
 

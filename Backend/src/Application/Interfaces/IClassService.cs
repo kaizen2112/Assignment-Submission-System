@@ -20,4 +20,14 @@ public interface IClassService
     Task<Result<PagedResult<EnrolledClassResponse>>> GetMyClassesAsync(
         PagedQueryParameters query,
         CancellationToken cancellationToken = default);
+
+    // The roster of a class the caller is enrolled in.
+    //
+    // classId is a parameter here, unlike GetMyClassesAsync — a student may be in several classes, so the
+    // one being asked about has to be named. That makes enrolment the gate: the service checks the caller is
+    // in *this* class before returning anybody, so the id cannot be edited into another class's roster.
+    Task<Result<PagedResult<ClassmateResponse>>> GetClassmatesAsync(
+        Guid classId,
+        PagedQueryParameters query,
+        CancellationToken cancellationToken = default);
 }

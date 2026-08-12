@@ -1,4 +1,5 @@
 using AssignmentSystem.Application.Common;
+using AssignmentSystem.Application.DTOs.Assignment;
 using AssignmentSystem.Application.Interfaces;
 using AssignmentSystem.Domain.Entities;
 using AssignmentSystem.Domain.Enums;
@@ -59,6 +60,88 @@ public sealed class AssignmentRepository : IAssignmentRepository
 
     public Task<bool> HasSubmissionsAsync(Guid assignmentId, CancellationToken cancellationToken = default) =>
         _context.Submissions.AnyAsync(s => s.AssignmentId == assignmentId, cancellationToken);
+
+    // Two counts, no entity loaded. The enrolment count is keyed on the assignment's class rather than on
+    // the assignment, because "who was supposed to do this" is a property of the class — a student enrolled
+    // after the deadline still counts as somebody who has not submitted.
+    //
+    // The Status filter looks redundant and is kept anyway: in practice a submission row is only ever
+    // created by SubmissionService.SubmitAsync, which never writes NotSubmitted. But NotSubmitted exists in
+    // the enum, so a row could hold it, and a "submitted" count that included it would be wrong.
+    public async Task<CompletionStats> GetCompletionStatsAsync(
+        Guid assignmentId,
+        CancellationToken cancellationToken = default)
+    {
+        var classId = await _context.Assignments
+            .Where(a => a.Id == assignmentId)
+            .Select(a => (Guid?)a.ClassId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        // No such assignment. Zeroes rather than a throw: the caller has already decided this id is
+        // readable, and a race with a delete should not turn a read into a 500.
+        if (classId is not { } resolvedClassId)
+        {
+            return new CompletionStats(0, 0);
+        }
+
+        var enrolled = await _context.StudentEnrollments
+            .CountAsync(e => e.ClassId == resolvedClassId, cancellationToken);
+
+        var submitted = await _context.Submissions
+            .CountAsync(
+                s => s.AssignmentId == assignmentId && s.Status != SubmissionStatus.NotSubmitted,
+                cancellationToken);
+
+        return new CompletionStats(enrolled, submitted);
+    }
+
+    // Three queries for the whole page: the assignments' class ids, one grouped enrolment count per class,
+    // one grouped submission count per assignment. Calling the single-assignment overload per row would be
+    // 3n queries on the teacher's list — the classic N+1, on the one screen that always shows twenty rows.
+    //
+    // Grouping in SQL rather than counting in memory: the alternative is transferring every enrolment and
+    // every submission row to count them here, which is slow in exactly the way that looks fine with seed
+    // data and falls over with a real school in it.
+    public async Task<IReadOnlyDictionary<Guid, CompletionStats>> GetCompletionStatsAsync(
+        IReadOnlyCollection<Guid> assignmentIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (assignmentIds.Count == 0)
+        {
+            return new Dictionary<Guid, CompletionStats>();
+        }
+
+        var ids = assignmentIds.Distinct().ToList();
+
+        var scopes = await _context.Assignments
+            .AsNoTracking()
+            .Where(a => ids.Contains(a.Id))
+            .Select(a => new { a.Id, a.ClassId })
+            .ToListAsync(cancellationToken);
+
+        var classIds = scopes.Select(s => s.ClassId).Distinct().ToList();
+
+        var enrolledByClass = await _context.StudentEnrollments
+            .Where(e => classIds.Contains(e.ClassId))
+            .GroupBy(e => e.ClassId)
+            .Select(g => new { ClassId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(g => g.ClassId, g => g.Count, cancellationToken);
+
+        var submittedByAssignment = await _context.Submissions
+            .Where(s => ids.Contains(s.AssignmentId) && s.Status != SubmissionStatus.NotSubmitted)
+            .GroupBy(s => s.AssignmentId)
+            .Select(g => new { AssignmentId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(g => g.AssignmentId, g => g.Count, cancellationToken);
+
+        // GroupBy omits empty groups, so a class with no enrolments and an assignment with no submissions
+        // are both absent above. Defaulting to 0 here is what lets the caller treat every requested id as
+        // present — "no submissions yet" is an answer, not a missing one.
+        return scopes.ToDictionary(
+            s => s.Id,
+            s => new CompletionStats(
+                enrolledByClass.GetValueOrDefault(s.ClassId),
+                submittedByAssignment.GetValueOrDefault(s.Id)));
+    }
 
     public async Task AddAsync(Assignment assignment, CancellationToken cancellationToken = default) =>
         await _context.Assignments.AddAsync(assignment, cancellationToken);

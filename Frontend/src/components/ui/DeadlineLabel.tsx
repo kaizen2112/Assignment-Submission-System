@@ -1,4 +1,4 @@
-import { Clock } from "lucide-react";
+import { AlertCircle, Clock } from "lucide-react";
 import { cn, daysUntil, deadlineUrgency, formatDate } from "@/lib/utils";
 
 // A deadline, coloured by how much it matters right now. The urgency thresholds live in utils.ts so a
@@ -35,17 +35,18 @@ export function DeadlineLabel({
   }
 
   if (urgency === "today" || urgency === "tomorrow") {
-    // A pill, not just red text. These two are the only cases where the student has to act now, so they
-    // get a shape as well as a colour.
+    // Red text with an alert icon rather than the filled pill this used to be. The pill was competing with
+    // the status badge two columns to its left — two chips on one row, and neither read as more urgent than
+    // the other. A distinct *icon* separates them instead: every other state here carries a clock, so
+    // swapping in a triangle is the thing the eye catches, and colour is no longer doing the work alone.
     return (
       <span
         className={cn(
-          "inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 dark:bg-red-950/40",
-          "text-xs font-medium text-red-600 dark:text-red-300",
+          "inline-flex items-center gap-1.5 text-xs font-semibold text-red-600 dark:text-red-400",
           className,
         )}
       >
-        <Clock aria-hidden="true" className="size-3.5 shrink-0" />
+        <AlertCircle aria-hidden="true" className="size-3.5 shrink-0" />
         Due {urgency === "today" ? "today" : "tomorrow"}
       </span>
     );

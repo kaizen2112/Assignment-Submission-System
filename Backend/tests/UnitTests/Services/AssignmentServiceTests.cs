@@ -418,6 +418,284 @@ public sealed class AssignmentServiceTests
         result.Value.CreatedByTeacherName.Should().Be("Sarah Ahmed");
     }
 
+    // =============================================================================================
+    // DUPLICATION — a Draft copy, owned by the caller, carrying nothing student-specific
+    // =============================================================================================
+
+    [Fact]
+    public async Task DuplicateAsync_TeacherOwnsAssignment_CreatesDraftCopy()
+    {
+        // Arrange — a *published* original, so "the copy is a Draft" is a real assertion rather than an
+        // artefact of the original's state.
+        var owner = EntityBuilders.Teacher("Sarah Ahmed", "sarah@test.com");
+        var original = EntityBuilders.Assignment(
+            status: AssignmentStatus.Published,
+            teacherId: owner.Id,
+            createdByTeacher: owner,
+            maxMarks: 40,
+            allowLateSubmission: true,
+            title: "Algebra Problem Set 1");
+
+        var mocks = new MockRepositoryHelper.ServiceMocks
+        {
+            Assignments = MockRepositoryHelper.AssignmentsWith(original),
+            Classes = MockRepositoryHelper.Classes(isAssigned: true),
+            Users = MockRepositoryHelper.UsersWith(owner),
+            CurrentUser = MockRepositoryHelper.CurrentUser(owner.Id, Role.Teacher)
+        };
+
+        // The entity handed to the repository is captured, because most of what matters here is about what
+        // gets *persisted* rather than what comes back in the DTO.
+        Domain.Entities.Assignment? saved = null;
+        mocks.Assignments
+            .Setup(r => r.AddAsync(It.IsAny<Domain.Entities.Assignment>(), It.IsAny<CancellationToken>()))
+            .Callback((Domain.Entities.Assignment a, CancellationToken _) => saved = a);
+
+        // Act
+        var result = await Build(mocks).DuplicateAsync(original.Id, CancellationToken.None);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+
+        // Draft, always — a copy that arrived Published would be visible to students with a placeholder
+        // deadline nobody had reviewed.
+        result.Value.Status.Should().Be(nameof(AssignmentStatus.Draft));
+        result.Value.Title.Should().StartWith("Copy of ");
+        result.Value.Title.Should().Be("Copy of Algebra Problem Set 1");
+
+        // A new row, not a mutation of the original.
+        result.Value.Id.Should().NotBe(original.Id);
+        original.Status.Should().Be(AssignmentStatus.Published, "the original must be left untouched");
+        original.Title.Should().Be("Algebra Problem Set 1");
+
+        saved.Should().NotBeNull();
+        saved!.Status.Should().Be(AssignmentStatus.Draft);
+        saved.CreatedByTeacherId.Should().Be(owner.Id);
+
+        // Carried over: everything that describes the work itself.
+        saved.MaxMarks.Should().Be(40);
+        saved.ClassId.Should().Be(original.ClassId);
+        saved.SubjectId.Should().Be(original.SubjectId);
+        saved.AllowLateSubmission.Should().BeTrue();
+
+        // NOT carried over: anything that records what particular students did. There is no code that
+        // avoids copying these — the copy is built through the factory rather than cloned — and this
+        // asserts that the factory route is the one taken.
+        saved.Submissions.Should().BeEmpty();
+
+        // A placeholder deadline in the future, so the copy is never born overdue.
+        saved.Deadline.Should().BeAfter(DateTime.UtcNow);
+
+        mocks.VerifyAssignmentSaved(Times.Once());
+    }
+
+    [Fact]
+    public async Task DuplicateAsync_TeacherNotOwner_ReturnsFailure()
+    {
+        // Another teacher's assignment. LoadForMutationAsync checks existence *before* ownership, so this is
+        // a **403, not a 404** — matching update, publish and delete, where 404 means "no such id" and 403
+        // means "exists, but not yours". The read path is the asymmetric one: GetByIdAsync scopes reads, so
+        // the same assignment is a 404 on GET. That asymmetry is deliberate and documented in the README.
+        var owner = EntityBuilders.Teacher("Owner", "owner@test.com");
+        var intruder = EntityBuilders.Teacher("Intruder", "intruder@test.com");
+        var original = EntityBuilders.Assignment(teacherId: owner.Id, createdByTeacher: owner);
+
+        var mocks = new MockRepositoryHelper.ServiceMocks
+        {
+            Assignments = MockRepositoryHelper.AssignmentsWith(original),
+            Classes = MockRepositoryHelper.Classes(isAssigned: true),
+            Users = MockRepositoryHelper.UsersWith(intruder),
+            CurrentUser = MockRepositoryHelper.CurrentUser(intruder.Id, Role.Teacher)
+        };
+
+        var result = await Build(mocks).DuplicateAsync(original.Id, CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+
+        // Pinned explicitly, because the first version of this test asserted only "it failed" — which passes
+        // whichever code comes back, and left a wrong claim in the comment above it for a probe to catch.
+        result.ErrorType.Should().Be(ErrorType.Forbidden);
+
+        // Nothing was written. A service that refused *after* inserting would still show a failure here, so
+        // the absence of the write is asserted separately.
+        mocks.Assignments.Verify(
+            r => r.AddAsync(It.IsAny<Domain.Entities.Assignment>(), It.IsAny<CancellationToken>()),
+            Times.Never());
+        mocks.VerifyAssignmentSaved(Times.Never());
+    }
+
+    [Fact]
+    public async Task DuplicateAsync_OwnerWithoutTheClassSubjectGrant_ReturnsForbidden()
+    {
+        // Owning it is not enough. Duplicating creates new work in a class+subject, so it needs the same
+        // rule-4 authority as creating from scratch — a teacher moved off a class cannot seed it with a copy
+        // of their old assignment.
+        var owner = EntityBuilders.Teacher();
+        var original = EntityBuilders.Assignment(teacherId: owner.Id, createdByTeacher: owner);
+
+        var mocks = new MockRepositoryHelper.ServiceMocks
+        {
+            Assignments = MockRepositoryHelper.AssignmentsWith(original),
+            Classes = MockRepositoryHelper.Classes(isAssigned: false),
+            Users = MockRepositoryHelper.UsersWith(owner),
+            CurrentUser = MockRepositoryHelper.CurrentUser(owner.Id, Role.Teacher)
+        };
+
+        var result = await Build(mocks).DuplicateAsync(original.Id, CancellationToken.None);
+
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorType.Should().Be(ErrorType.Forbidden);
+        mocks.VerifyAssignmentSaved(Times.Never());
+    }
+
+    // =============================================================================================
+    // COMPLETION — the percentage, and who is allowed to see it
+    // =============================================================================================
+
+    [Fact]
+    public async Task GetCompletionStats_NoSubmissions_ReturnsZeroPercent()
+    {
+        var teacher = EntityBuilders.Teacher();
+        var assignment = EntityBuilders.Assignment(teacherId: teacher.Id, createdByTeacher: teacher);
+
+        var mocks = new MockRepositoryHelper.ServiceMocks
+        {
+            Assignments = MockRepositoryHelper.AssignmentsWith(assignment).WithCompletion(18, 0),
+            CurrentUser = MockRepositoryHelper.CurrentUser(teacher.Id, Role.Teacher)
+        };
+
+        var result = await Build(mocks).GetByIdAsync(assignment.Id, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Completion.Should().NotBeNull();
+        result.Value.Completion!.TotalEnrolled.Should().Be(18);
+        result.Value.Completion.TotalSubmitted.Should().Be(0);
+        result.Value.Completion.Percentage.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task GetCompletionStats_AllSubmitted_Returns100Percent()
+    {
+        var teacher = EntityBuilders.Teacher();
+        var assignment = EntityBuilders.Assignment(teacherId: teacher.Id, createdByTeacher: teacher);
+
+        var mocks = new MockRepositoryHelper.ServiceMocks
+        {
+            Assignments = MockRepositoryHelper.AssignmentsWith(assignment).WithCompletion(18, 18),
+            CurrentUser = MockRepositoryHelper.CurrentUser(teacher.Id, Role.Teacher)
+        };
+
+        var result = await Build(mocks).GetByIdAsync(assignment.Id, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Completion!.Percentage.Should().Be(100);
+    }
+
+    [Theory]
+    // One decimal place, and the rounding is the assertion: 12/18 is 66.666…, which must not reach the UI
+    // as a number with fifteen digits after the point.
+    [InlineData(18, 12, 66.7)]
+    [InlineData(3, 1, 33.3)]
+    [InlineData(8, 3, 37.5)]
+    // No enrolled students is the division-by-zero case. Zero rather than NaN — and the UI shows an em dash
+    // instead, because "0% of nobody" says something different from "0% of eighteen".
+    [InlineData(0, 0, 0)]
+    public void CompletionStats_Percentage_IsRoundedToOneDecimal(
+        int enrolled,
+        int submitted,
+        double expected)
+    {
+        new CompletionStats(enrolled, submitted).Percentage.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_Student_IsNotToldHowManyClassmatesSubmitted()
+    {
+        // Completion is withheld from students server-side, not hidden by the UI. How many of their
+        // classmates have handed in is information about other people, and sending it down to be hidden
+        // leaves it one network-tab click away.
+        var student = EntityBuilders.Student();
+        var published = EntityBuilders.Assignment(status: AssignmentStatus.Published);
+
+        var mocks = new MockRepositoryHelper.ServiceMocks
+        {
+            Assignments = MockRepositoryHelper.AssignmentsForStudent(published, student.Id)
+                .WithCompletion(18, 12),
+            CurrentUser = MockRepositoryHelper.CurrentUser(student.Id, Role.Student)
+        };
+
+        var result = await Build(mocks).GetByIdAsync(published.Id, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Completion.Should().BeNull();
+
+        // And the query never ran. Withholding the field while still computing it would leave the numbers
+        // sitting in memory beside a student's response, one careless mapping change from being sent.
+        mocks.Assignments.Verify(
+            r => r.GetCompletionStatsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never());
+    }
+
+    [Fact]
+    public async Task GetPagedAsync_Teacher_AttachesCompletionInOneCallForTheWholePage()
+    {
+        // The N+1 guard. Three assignments must cost one bulk call, not one per row — the single-assignment
+        // overload in a loop is what this endpoint must never do.
+        var teacher = EntityBuilders.Teacher();
+        var one = EntityBuilders.Assignment(teacherId: teacher.Id, createdByTeacher: teacher, title: "One");
+        var two = EntityBuilders.Assignment(teacherId: teacher.Id, createdByTeacher: teacher, title: "Two");
+        var three = EntityBuilders.Assignment(teacherId: teacher.Id, createdByTeacher: teacher, title: "Three");
+
+        var mocks = new MockRepositoryHelper.ServiceMocks
+        {
+            Assignments = MockRepositoryHelper.AssignmentsEmpty()
+                .WithPage(one, two, three)
+                .WithCompletion(10, 5),
+            CurrentUser = MockRepositoryHelper.CurrentUser(teacher.Id, Role.Teacher)
+        };
+
+        var result = await Build(mocks).GetPagedAsync(
+            new AssignmentQueryParameters(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Items.Should().HaveCount(3);
+        result.Value.Items.Should().OnlyContain(a => a.Completion != null && a.Completion.Percentage == 50);
+
+        mocks.Assignments.Verify(
+            r => r.GetCompletionStatsAsync(
+                It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()),
+            Times.Once());
+        mocks.Assignments.Verify(
+            r => r.GetCompletionStatsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never());
+    }
+
+    [Fact]
+    public async Task GetPagedAsync_Student_GetsNoCompletionOnAnyRow()
+    {
+        var student = EntityBuilders.Student();
+        var published = EntityBuilders.Assignment(status: AssignmentStatus.Published);
+
+        var mocks = new MockRepositoryHelper.ServiceMocks
+        {
+            Assignments = MockRepositoryHelper.AssignmentsEmpty()
+                .WithPage(published)
+                .WithCompletion(18, 12),
+            CurrentUser = MockRepositoryHelper.CurrentUser(student.Id, Role.Student)
+        };
+
+        var result = await Build(mocks).GetPagedAsync(
+            new AssignmentQueryParameters(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Items.Should().OnlyContain(a => a.Completion == null);
+
+        mocks.Assignments.Verify(
+            r => r.GetCompletionStatsAsync(
+                It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()),
+            Times.Never());
+    }
+
     [Fact]
     public async Task GetPagedAsync_ListRows_AlsoNameTheTeacher()
     {

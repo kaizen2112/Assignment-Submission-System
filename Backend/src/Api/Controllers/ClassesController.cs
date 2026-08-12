@@ -36,4 +36,24 @@ public sealed class ClassesController : ControllerBase
 
         return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult();
     }
+
+    // The roster of one of the caller's own classes. Nested under the class rather than a flat
+    // /classmates?classId=…, because a student may be in several and the class is what is being read.
+    //
+    // 404 for a class the caller is not enrolled in — never 403, which would confirm it exists (A7).
+    [HttpGet("{classId:guid}/classmates")]
+    [Authorize(Roles = Student)]
+    [ProducesResponseType(typeof(PagedResult<ClassmateResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetClassmates(
+        Guid classId,
+        [FromQuery] PagedQueryParameters query,
+        CancellationToken ct)
+    {
+        var result = await _classes.GetClassmatesAsync(classId, query, ct);
+
+        return result.IsSuccess ? Ok(result.Value) : result.ToProblemResult();
+    }
 }

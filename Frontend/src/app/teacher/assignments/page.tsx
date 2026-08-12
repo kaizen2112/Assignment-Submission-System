@@ -2,14 +2,16 @@
 
 import { useCallback, useState } from "react";
 import Link from "next/link";
-import { ClipboardList, Pencil, Plus, Send, Trash2, Upload } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ClipboardList, Copy, Pencil, Plus, Send, Trash2, Upload } from "lucide-react";
+import { CompletionText } from "@/components/teacher/Completion";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Alert } from "@/components/ui/Alert";
 import { AssignmentStatusBadge, Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { DeadlineLabel } from "@/components/ui/DeadlineLabel";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { IconButton, IconLink, RowActions } from "@/components/ui/IconButton";
+import { ActionButton, ActionLink, RowActionBar } from "@/components/ui/RowActionBar";
 import { Pagination } from "@/components/ui/Pagination";
 import { Select } from "@/components/ui/Select";
 import {
@@ -24,13 +26,19 @@ import {
 } from "@/components/ui/Table";
 import { useAsync } from "@/hooks/useAsync";
 import { ApiError } from "@/lib/api";
-import { deleteAssignment, listAssignments, publishAssignment } from "@/lib/assignments";
+import {
+  deleteAssignment,
+  duplicateAssignment,
+  listAssignments,
+  publishAssignment,
+} from "@/lib/assignments";
 import { DEFAULT_PAGE_SIZE } from "@/types/api";
 import type { AssignmentStatus } from "@/types/api";
 
-const COLUMNS = 5;
+const COLUMNS = 6;
 
 export default function TeacherAssignmentsPage() {
+  const router = useRouter();
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<AssignmentStatus | "">("");
 
@@ -44,14 +52,29 @@ export default function TeacherAssignmentsPage() {
 
   // useCallback with page/status/reloadKey in the deps is what drives refetching — useAsync re-runs
   // whenever this identity changes. An inline arrow here would refetch forever.
+  // Class and subject come from the URL, set by the sidebar's class tree. In the query string rather than in
+  // component state so the filtered view is shareable, survives a reload and gets the back button for free.
+  // The API already accepts both — this only forwards them.
+  const searchParams = useSearchParams();
+  const classId = searchParams.get("classId") ?? undefined;
+  const subjectId = searchParams.get("subjectId") ?? undefined;
+
   const loader = useCallback(
     (signal: AbortSignal) =>
       listAssignments(
-        { page, pageSize: DEFAULT_PAGE_SIZE, status: status || undefined, sortBy: "deadline", sortDir: "asc" },
+        {
+          page,
+          pageSize: DEFAULT_PAGE_SIZE,
+          status: status || undefined,
+          classId,
+          subjectId,
+          sortBy: "deadline",
+          sortDir: "asc",
+        },
         signal,
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reloadKey is a deliberate refetch trigger
-    [page, status, reloadKey],
+    [page, status, classId, subjectId, reloadKey],
   );
 
   const { data, error, loading } = useAsync(loader);
@@ -72,6 +95,29 @@ export default function TeacherAssignmentsPage() {
     } finally {
       setBusyId(null);
     }
+  };
+
+  // Straight to the copy's edit form on success. The copy carries a placeholder deadline a week out, so
+  // landing anywhere else would leave a teacher with a draft they have to remember to go and fix — the
+  // ?duplicated=1 flag is what tells that page to say so.
+  //
+  // No setReloadKey: this navigates away, so refetching the list the teacher is leaving would be work
+  // nobody sees. Failures stay on the list and surface in the existing actionError banner.
+  const handleDuplicate = async (id: string) => {
+    setBusyId(id);
+    setActionError(null);
+
+    try {
+      const copy = await duplicateAssignment(id);
+      router.push(`/teacher/assignments/${copy.id}/edit?duplicated=1`);
+    } catch (caught) {
+      setActionError(
+        caught instanceof ApiError ? caught.message : "That assignment could not be duplicated.",
+      );
+      setBusyId(null);
+    }
+    // No `finally`: on success the component is unmounting, and clearing busyId would be a state update on
+    // a page already navigating away.
   };
 
   const handleDelete = (id: string, title: string) => {
@@ -112,6 +158,27 @@ export default function TeacherAssignmentsPage() {
         />
       </div>
 
+      {/* A filter arriving from the sidebar has to announce itself. Landing on a short list with no
+          explanation reads as missing data, and the only clue would be a query string nobody looks at. The
+          class and subject names come from the first row rather than a second request — if the filter matched
+          nothing there is no name to show, and the empty state below carries the message instead. */}
+      {(classId || subjectId) && (
+        <div className="mb-5 flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-gray-500 dark:text-gray-400">Filtered to</span>
+          <Badge tone="accent">
+            {data?.items[0]
+              ? `${data.items[0].className} · ${data.items[0].subjectName}`
+              : "one class and subject"}
+          </Badge>
+          <Link
+            href="/teacher/assignments"
+            className="font-medium text-indigo-600 transition-colors duration-150 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
+          >
+            Clear
+          </Link>
+        </div>
+      )}
+
       {error && <Alert className="mb-6">{error}</Alert>}
       {actionError && <Alert className="mb-6">{actionError}</Alert>}
 
@@ -119,11 +186,19 @@ export default function TeacherAssignmentsPage() {
       {!loading && !error && data?.items.length === 0 ? (
         <EmptyState
           icon={<ClipboardList />}
-          title={status ? `No ${status.toLowerCase()} assignments` : "No assignments yet"}
+          title={
+            classId || subjectId
+              ? "Nothing for this class and subject"
+              : status
+                ? `No ${status.toLowerCase()} assignments`
+                : "No assignments yet"
+          }
           description={
-            status
-              ? "Try clearing the status filter to see everything you have created."
-              : "Create your first assignment. It starts as a draft, so students will not see it until you publish."
+            classId || subjectId
+              ? "You have not created anything for this class and subject yet. Clear the filter to see everything."
+              : status
+                ? "Try clearing the status filter to see everything you have created."
+                : "Create your first assignment. It starts as a draft, so students will not see it until you publish."
           }
           action={
             <Link href="/teacher/assignments/new">
@@ -139,6 +214,7 @@ export default function TeacherAssignmentsPage() {
                 <TH>Title</TH>
                 <TH>Class / Subject</TH>
                 <TH>Status</TH>
+                <TH>Submitted</TH>
                 <TH>Deadline</TH>
                 <TH align="right">Actions</TH>
               </TR>
@@ -165,9 +241,16 @@ export default function TeacherAssignmentsPage() {
                         </span>
                       </TDPrimary>
 
+                      {/* Class name promoted, subject demoted. Both were mid-gray before, so the pair read
+                          as one two-line blob; now the class is the line you scan and the subject qualifies
+                          it. */}
                       <TD>
-                        <span className="block text-gray-700 dark:text-gray-300">{assignment.className}</span>
-                        <span className="block text-xs text-gray-400 dark:text-gray-500">{assignment.subjectName}</span>
+                        <span className="block text-sm font-medium text-gray-900 dark:text-white">
+                          {assignment.className}
+                        </span>
+                        <span className="block text-xs text-gray-500 dark:text-gray-400">
+                          {assignment.subjectName}
+                        </span>
                       </TD>
 
                       <TD>
@@ -177,34 +260,60 @@ export default function TeacherAssignmentsPage() {
                         </div>
                       </TD>
 
+                      {/* A draft has no submissions and cannot have any (rule 6), so it reports nothing
+                          rather than an honest-looking 0 / 18 that would read as a class ignoring it. */}
+                      <TD>
+                        {assignment.status === "Draft" ? (
+                          <span className="text-gray-400 dark:text-gray-500">—</span>
+                        ) : (
+                          <CompletionText stats={assignment.completion} />
+                        )}
+                      </TD>
+
                       <TD>
                         <DeadlineLabel deadline={assignment.deadline} />
                       </TD>
 
                       <TD align="right">
-                        {/* Icon-only, revealed on row hover. Four text buttons per row turned this
-                            table into a wall of words; see RowActions for why they stay visible to
-                            keyboard and touch users. */}
-                        <RowActions>
+                        {/* Labelled, not icon-only. A row here carries four or five actions, and a strip of
+                            bare glyphs makes "which one duplicates and which one publishes?" a memory test.
+                            See RowActionBar for why the strip stays partly visible at rest rather than
+                            appearing only on hover. */}
+                        <RowActionBar>
                           {/* Drafts have no submissions to review, so the link would always be empty. */}
                           {assignment.status === "Published" && (
-                            <IconLink
+                            <ActionLink
                               href={`/teacher/assignments/${assignment.id}/submissions`}
                               label="View submissions"
                               icon={<Send />}
+                              tone="accent"
                             />
                           )}
 
-                          <IconLink
+                          <ActionLink
                             href={`/teacher/assignments/${assignment.id}/edit`}
-                            label="Edit assignment"
+                            label="Edit"
                             icon={<Pencil />}
                           />
 
+                          {/* Available on drafts as well as published work: reusing last term's brief is
+                              the whole point, and its status is irrelevant to whether it makes a good
+                              starting point. */}
+                          <ActionButton
+                            label="Duplicate"
+                            icon={<Copy />}
+                            loading={isBusy}
+                            onClick={() => void handleDuplicate(assignment.id)}
+                          />
+
+                          {/* Not in the brief's list of four, and kept anyway: publishing is how a draft
+                              reaches students at all, and dropping the control would have removed the
+                              feature rather than relabelled it. */}
                           {assignment.status === "Draft" && (
-                            <IconButton
-                              label="Publish assignment"
+                            <ActionButton
+                              label="Publish"
                               icon={<Upload />}
+                              tone="accent"
                               loading={isBusy}
                               onClick={() =>
                                 void runAction(assignment.id, () => publishAssignment(assignment.id))
@@ -212,14 +321,14 @@ export default function TeacherAssignmentsPage() {
                             />
                           )}
 
-                          <IconButton
-                            label="Delete assignment"
+                          <ActionButton
+                            label="Delete"
                             icon={<Trash2 />}
                             tone="danger"
                             loading={isBusy}
                             onClick={() => handleDelete(assignment.id, assignment.title)}
                           />
-                        </RowActions>
+                        </RowActionBar>
                       </TD>
                     </TR>
                   );

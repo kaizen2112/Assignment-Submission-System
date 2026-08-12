@@ -1,4 +1,5 @@
 using AssignmentSystem.Application.Common;
+using AssignmentSystem.Application.DTOs.Assignment;
 using AssignmentSystem.Application.Interfaces;
 using AssignmentSystem.Domain.Entities;
 using AssignmentSystem.Domain.Enums;
@@ -41,6 +42,50 @@ internal static class MockRepositoryHelper
 
     // --- Assignments ----------------------------------------------------------------------------
 
+    // Every assignment mock gets a completion-stats setup, and that is a hazard fix rather than a
+    // convenience. Moq's default for an unstubbed `Task<IReadOnlyDictionary<…>>` is a completed task
+    // carrying **null**, and the teacher/admin list path indexes into that dictionary — so without this,
+    // every existing test that pages assignments as a teacher or an admin throws a
+    // NullReferenceException that reads like a product bug and is a missing setup.
+    //
+    // Zeroes by default, so a test that does not care about completion sees "nobody enrolled, nobody
+    // submitted" rather than a crash. Tests that do care call WithCompletion below.
+    internal static Mock<IAssignmentRepository> WithDefaultCompletion(
+        this Mock<IAssignmentRepository> mock)
+    {
+        mock.Setup(r => r.GetCompletionStatsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CompletionStats(0, 0));
+
+        // Echoes back a zeroed entry for every id asked about, which is the contract the real repository
+        // promises: every requested assignment is present, missing rows read as zero.
+        mock.Setup(r => r.GetCompletionStatsAsync(
+                It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyCollection<Guid> ids, CancellationToken _) =>
+                (IReadOnlyDictionary<Guid, CompletionStats>)ids.ToDictionary(
+                    id => id, _ => new CompletionStats(0, 0)));
+
+        return mock;
+    }
+
+    // Real figures, for the tests that assert on the percentage. Applies to both overloads so it does not
+    // matter whether the test reads one assignment or a page of them.
+    internal static Mock<IAssignmentRepository> WithCompletion(
+        this Mock<IAssignmentRepository> mock,
+        int totalEnrolled,
+        int totalSubmitted)
+    {
+        var stats = new CompletionStats(totalEnrolled, totalSubmitted);
+
+        mock.Setup(r => r.GetCompletionStatsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(stats);
+        mock.Setup(r => r.GetCompletionStatsAsync(
+                It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyCollection<Guid> ids, CancellationToken _) =>
+                (IReadOnlyDictionary<Guid, CompletionStats>)ids.ToDictionary(id => id, _ => stats));
+
+        return mock;
+    }
+
     // The teacher/admin read path. Matches on the assignment's own id, so a lookup for any other id
     // falls through to the mock's default (null) — which is exactly the not-found case.
     internal static Mock<IAssignmentRepository> AssignmentsWith(AssignmentEntity assignment)
@@ -48,7 +93,7 @@ internal static class MockRepositoryHelper
         var mock = new Mock<IAssignmentRepository>();
         mock.Setup(r => r.GetByIdAsync(assignment.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(assignment);
-        return mock;
+        return mock.WithDefaultCompletion();
     }
 
     // Every id returns null: the 404 arrangement.
@@ -60,7 +105,7 @@ internal static class MockRepositoryHelper
         mock.Setup(r => r.GetPublishedForStudentAsync(
                 It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((AssignmentEntity?)null);
-        return mock;
+        return mock.WithDefaultCompletion();
     }
 
     // The student read path (rules 3 + 6). Set visible: false to model a draft, or an assignment in a
@@ -77,7 +122,7 @@ internal static class MockRepositoryHelper
             .ReturnsAsync(visible ? assignment : null);
         mock.Setup(r => r.GetByIdAsync(assignment.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(assignment);
-        return mock;
+        return mock.WithDefaultCompletion();
     }
 
     internal static Mock<IAssignmentRepository> WithPage(
@@ -235,6 +280,19 @@ internal static class MockRepositoryHelper
         return mock;
     }
 
+    // "This student is in this class." Matched on the pair, so a query about any other pair falls through to
+    // the mock's default of false — which is the not-enrolled case the classmates gate turns into a 404.
+    internal static Mock<IClassRepository> WithEnrollment(
+        this Mock<IClassRepository> mock,
+        Guid studentId,
+        Guid classId)
+    {
+        mock.Setup(r => r.EnrollmentExistsAsync(studentId, classId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        return mock;
+    }
+
     // --- Users ----------------------------------------------------------------------------------
 
     internal static Mock<IUserRepository> UsersWith(params User[] users)
@@ -258,7 +316,10 @@ internal static class MockRepositoryHelper
     // reaches into whichever mock it wants to reconfigure or verify.
     internal sealed class ServiceMocks
     {
-        internal Mock<IAssignmentRepository> Assignments { get; init; } = new();
+        // WithDefaultCompletion here as well as in the factories: a test that leaves this at its default and
+        // pages assignments as a teacher would otherwise hit the null-dictionary trap described above.
+        internal Mock<IAssignmentRepository> Assignments { get; init; } =
+            new Mock<IAssignmentRepository>().WithDefaultCompletion();
         internal Mock<ISubmissionRepository> Submissions { get; init; } = new();
         internal Mock<IClassRepository> Classes { get; init; } = new();
         internal Mock<IUserRepository> Users { get; init; } = new();

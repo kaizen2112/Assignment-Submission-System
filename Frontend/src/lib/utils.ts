@@ -71,7 +71,11 @@ export type BadgeTone =
 
 export function assignmentStatusTone(status: AssignmentStatus): BadgeTone {
   // Draft is neutral on purpose — it is the absence of a state, not a warning.
-  return status === "Published" ? "info" : "neutral";
+  //
+  // Published is accent (indigo) rather than info (blue): indigo is this app's "live, and yours" colour, and
+  // blue was close enough to the neutral gray beside it that a scan down the column could not separate the
+  // two states at a glance.
+  return status === "Published" ? "accent" : "neutral";
 }
 
 export function submissionStatusTone(status: SubmissionStatus): BadgeTone {

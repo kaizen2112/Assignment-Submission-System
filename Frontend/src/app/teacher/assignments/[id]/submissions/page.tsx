@@ -1,10 +1,12 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Eye, Inbox, PenLine } from "lucide-react";
 import { CommentSection } from "@/components/comments/CommentSection";
+import { CompletionBar } from "@/components/teacher/Completion";
+import { MarksDistribution } from "@/components/teacher/MarksDistribution";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Alert } from "@/components/ui/Alert";
 import { Avatar } from "@/components/ui/Avatar";
@@ -48,6 +50,37 @@ export default function AssignmentSubmissionsPage() {
 
   const ungraded = data?.items.filter((s) => s.status !== "Graded").length ?? 0;
 
+  // Marks spread across the graded submissions on screen. Derived from rows already fetched, so it costs no
+  // request — and correspondingly it describes the loaded page rather than the whole assignment, which is
+  // why `truncated` below is passed on to the caption.
+  //
+  // null when nothing is graded yet, and the section is then not rendered at all: four chips reading "—"
+  // would take up the space of an answer without being one.
+  const submissions = data?.items;
+  const maxMarks = assignment?.maxMarks;
+
+  const stats = useMemo(() => {
+    // marks is null until a teacher grades, so this filters on the mark rather than on status === "Graded".
+    // The two agree today; the mark is what the arithmetic actually needs.
+    const graded = (submissions ?? []).filter((s) => s.marks !== null);
+    if (graded.length === 0 || maxMarks === undefined) return null;
+
+    const marks = graded.map((s) => s.marks!);
+    const passMark = maxMarks * 0.5;
+
+    return {
+      highest: Math.max(...marks),
+      lowest: Math.min(...marks),
+      // One decimal, and +() to drop the trailing zero toFixed leaves behind — "72.0" reads as more
+      // precision than a mean of three marks has.
+      average: +(marks.reduce((a, b) => a + b, 0) / marks.length).toFixed(1),
+      passRate: +((marks.filter((m) => m >= passMark).length / marks.length) * 100).toFixed(1),
+      gradedCount: graded.length,
+    };
+  }, [submissions, maxMarks]);
+
+  const truncated = data ? data.totalCount > data.items.length : false;
+
   return (
     <>
       <PageHeader
@@ -66,8 +99,18 @@ export default function AssignmentSubmissionsPage() {
         ]}
       />
 
+      {/* Directly under the header, because "how much of the class has handed in" is the question this page
+          exists to answer and the table below is the detail behind it. Renders nothing for a draft or a
+          class with nobody enrolled — see CompletionBar. */}
+      {assignment && <CompletionBar stats={assignment.completion} className="mb-6" />}
+
       {assignmentError && <Alert className="mb-6">{assignmentError}</Alert>}
       {error && <Alert className="mb-6">{error}</Alert>}
+
+      {/* Only once something is graded. Before that there is no distribution to describe. */}
+      {!loading && stats && maxMarks !== undefined && (
+        <MarksDistribution stats={stats} maxMarks={maxMarks} truncated={truncated} />
+      )}
 
       {/* Counts only the current page, so it says so. Claiming a total would be wrong on page 2. */}
       {!loading && ungraded > 0 && (

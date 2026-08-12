@@ -31,6 +31,17 @@ export interface LoginRequest {
 
 // --- Assignments (Application/DTOs/Assignment/AssignmentDtos.cs) ---------------------------------
 
+// How much of a class has handed one assignment in (Application/DTOs/Assignment/CompletionStats.cs).
+//
+// `percentage` arrives already rounded to one decimal and already decided for the zero-enrolment case: the
+// server sends 0, and the UI renders an em dash instead, because "0% of nobody" is a different statement
+// from "0% of eighteen".
+export interface CompletionStats {
+  totalEnrolled: number;
+  totalSubmitted: number;
+  percentage: number;
+}
+
 export interface Assignment {
   id: string;
   title: string;
@@ -51,6 +62,9 @@ export interface Assignment {
   createdByTeacherName: string;
   createdAt: string;
   updatedAt: string;
+  // **Null for a student**, and null because the server withheld it rather than because the UI hides it:
+  // how many classmates have submitted is information about other people. Teacher and admin only.
+  completion: CompletionStats | null;
 }
 
 // The list endpoint omits `description` — up to 5000 characters per row, which no list screen shows.
@@ -170,6 +184,16 @@ export interface EnrolledClass {
   className: string;
   classCode: string;
   enrolledAt: string;
+}
+
+// One person on a class roster, as a classmate sees it. Name and email and nothing else — no marks, no
+// submission counts. See assumption A17 on the email being visible to classmates.
+export interface Classmate {
+  id: string;
+  fullName: string;
+  email: string;
+  // True for the signed-in student's own row. Decided server-side, so the client does not need its own id.
+  isYou: boolean;
 }
 
 export interface CreateSubjectRequest {

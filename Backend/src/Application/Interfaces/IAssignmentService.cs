@@ -16,6 +16,13 @@ public interface IAssignmentService
 
     Task<Result<AssignmentResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
+    // Copies an assignment the caller owns into a fresh Draft. Takes no teacherId parameter, deliberately:
+    // the caller comes from the token like everywhere else in this service, so there is no id to supply and
+    // therefore no way to create work in somebody else's name.
+    Task<Result<AssignmentResponse>> DuplicateAsync(
+        Guid id,
+        CancellationToken cancellationToken = default);
+
     Task<Result<AssignmentResponse>> CreateAsync(
         CreateAssignmentRequest request,
         CancellationToken cancellationToken = default);

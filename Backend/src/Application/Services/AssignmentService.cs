@@ -64,7 +64,24 @@ public sealed class AssignmentService : IAssignmentService
             _ => await _assignments.GetPagedForAdminAsync(filter, pagination, cancellationToken)
         };
 
-        return Result<PagedResult<AssignmentListItemResponse>>.Success(page.Map(ToListItem));
+        // Completion figures are for the people who act on them. A student is excluded here rather than in
+        // the UI: how many of their classmates have submitted is information about other people, and
+        // sending it down to be hidden client-side leaves it in plain sight in the network tab.
+        //
+        // Skipping the query for a student is the other half of that — no wasted work, and no code path
+        // where the numbers exist in memory next to a student's response.
+        if (caller.Role == Role.Student)
+        {
+            return Result<PagedResult<AssignmentListItemResponse>>.Success(page.Map(ToListItem));
+        }
+
+        // One call for the whole page. The single-assignment overload in a loop would be three queries per
+        // row on the busiest teacher screen in the app.
+        var completion = await _assignments.GetCompletionStatsAsync(
+            page.Items.Select(a => a.Id).ToList(), cancellationToken);
+
+        return Result<PagedResult<AssignmentListItemResponse>>.Success(
+            page.Map(a => ToListItem(a) with { Completion = completion.GetValueOrDefault(a.Id) }));
     }
 
     public async Task<Result<AssignmentResponse>> GetByIdAsync(
@@ -102,7 +119,11 @@ public sealed class AssignmentService : IAssignmentService
             return NotFound();
         }
 
-        return Result<AssignmentResponse>.Success(ToResponse(assignment));
+        // Teacher or admin only, same reasoning as the list above: the student branch returned before
+        // reaching here, so a student's response leaves Completion null and this query never runs.
+        var completion = await _assignments.GetCompletionStatsAsync(id, cancellationToken);
+
+        return Result<AssignmentResponse>.Success(ToResponse(assignment) with { Completion = completion });
     }
 
     public async Task<Result<AssignmentResponse>> CreateAsync(
@@ -164,8 +185,83 @@ public sealed class AssignmentService : IAssignmentService
         // belongs to this caller. Same reason CommentService fetches the author after an insert.
         var teacher = await _users.GetByIdAsync(caller.UserId, cancellationToken);
 
+        // Attached for the same reason as in DuplicateAsync: a null Completion must mean "withheld from a
+        // student" and nothing else. A newly created assignment has 0 of N submitted, which is a real answer.
+        var completion = await _assignments.GetCompletionStatsAsync(assignment.Id, cancellationToken);
+
         return Result<AssignmentResponse>.Success(
-            ToResponse(assignment, @class.Name, subject.Name, teacher?.FullName ?? string.Empty));
+            ToResponse(assignment, @class.Name, subject.Name, teacher?.FullName ?? string.Empty)
+                with { Completion = completion });
+    }
+
+    // How long a duplicate's deadline sits in the future before the teacher sets a real one. A week is long
+    // enough that the copy is never born overdue, and near enough that an unedited one looks obviously
+    // provisional rather than plausible.
+    private const int DuplicateDeadlineDays = 7;
+
+    public async Task<Result<AssignmentResponse>> DuplicateAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
+    {
+        // The same gate that guards editing: LoadForMutationAsync checks the assignment exists, that the
+        // caller created it, and that they still hold the class+subject grant (rule 4). Reused rather than
+        // rewritten, because "may this teacher act on this assignment?" must have one answer — a second
+        // implementation is a second thing to keep in step.
+        //
+        // Note what that means: a teacher who has been moved off a class can no longer duplicate their own
+        // old assignment into it, which is correct. Duplicating creates new work in that class+subject, so
+        // it needs the same authority as creating it from scratch.
+        if (ResolveCaller() is not { } caller)
+        {
+            return Result<AssignmentResponse>.Failure("Not authenticated.", ErrorType.Unauthorized);
+        }
+
+        var authorized = await LoadForMutationAsync(id, cancellationToken);
+        if (!authorized.IsSuccess)
+        {
+            return Result<AssignmentResponse>.Failure(authorized.Error!, authorized.ErrorType);
+        }
+
+        var original = authorized.Value;
+
+        // Create takes no status and always produces a Draft, so a copy cannot be born visible to students
+        // — the deadline is a placeholder and publishing one unreviewed would be the bug this guards.
+        //
+        // Nothing else is carried over. Submissions, grades and the comment thread all belong to the
+        // original: they are a record of what particular students did, and a copy of an assignment is a new
+        // piece of work nobody has answered yet. There is no code here to *avoid* copying them, which is the
+        // point of building from the factory rather than cloning the entity.
+        var copy = AssignmentEntity.Create(
+            $"Copy of {original.Title}",
+            original.Description,
+            DateTime.UtcNow.AddDays(DuplicateDeadlineDays),
+            original.MaxMarks,
+            original.ClassId,
+            original.SubjectId,
+            // The caller, not original.CreatedByTeacherId. They are the same person here — the ownership
+            // check above guarantees it — but writing the caller says which of the two facts this field is.
+            caller.UserId,
+            original.AllowLateSubmission);
+
+        await _assignments.AddAsync(copy, cancellationToken);
+        await _assignments.SaveChangesAsync(cancellationToken);
+
+        // Navigations are unpopulated on a freshly constructed entity, so the names come from the original
+        // (same class, same subject, by construction) and the teacher from a lookup — as in CreateAsync.
+        var teacher = await _users.GetByIdAsync(copy.CreatedByTeacherId, cancellationToken);
+
+        // Completion is attached here as well as on the read paths, so `Completion == null` means exactly
+        // one thing across the whole API: "the caller is a student and was not told". A field that also meant
+        // "nobody computed it on this particular route" would leave a client unable to tell a withheld figure
+        // from an absent one. It is a cheap pair of counts, and a brand-new copy has a real answer — nobody
+        // has submitted, out of however many are enrolled.
+        var completion = await _assignments.GetCompletionStatsAsync(copy.Id, cancellationToken);
+
+        return Result<AssignmentResponse>.Success(ToResponse(
+            copy,
+            original.Class.Name,
+            original.Subject.Name,
+            teacher?.FullName ?? string.Empty) with { Completion = completion });
     }
 
     public async Task<Result<AssignmentResponse>> UpdateAsync(
