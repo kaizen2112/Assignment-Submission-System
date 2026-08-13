@@ -43,10 +43,12 @@ export function TableWrap({
 }
 
 export function THead({ children }: { children: ReactNode }) {
-  // gray-800/50 rather than a solid tone: the header has to read as a shade of the card it sits in, and
-  // a translucent black over gray-800 stays related to it in a way a picked gray-750 would not.
+  // Translucent stops rather than solid tones: the header has to read as a shade of the card it sits in,
+  // and a gradient that fades *out* toward the first row stays related to that card in a way a pair of
+  // picked grays would not. It also means the header dissolves into the body instead of ending on a
+  // second hard line directly above the border that is already there.
   return (
-    <thead className="border-b border-gray-100 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50">
+    <thead className="border-b border-gray-100 bg-linear-to-b from-gray-50 to-gray-50/30 dark:border-gray-700 dark:from-gray-800/70 dark:to-gray-800/20">
       {children}
     </thead>
   );

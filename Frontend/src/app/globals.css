@@ -25,6 +25,11 @@
   /* The dark sidebar. Light content beside dark navigation is what separates "where am I" from
      "what am I looking at" without needing a border to say so. */
   --color-sidebar: #0f172a;
+
+  /* The tint at the top of the page canvas. A token rather than a literal in one gradient, because the
+     two themes need different *alphas* to look like the same effect: indigo at 10% reads as a soft wash
+     on gray-50 and as nothing at all on gray-900, where the eye has less headroom to notice a lift. */
+  --color-glow: rgb(99 102 241 / 0.1);
 }
 
 /* Dark mode re-points the tokens rather than asking every `bg-surface` call site to grow a `dark:`
@@ -33,12 +38,36 @@
    dark in light mode — inverting it would be the one element that gets *lighter* in dark mode. */
 .dark {
   --color-surface: #111827;
+  /* indigo-400 rather than indigo-500, and slightly stronger. The darker the ground, the more luminance
+     a tint needs before it registers as light rather than as a smudge. */
+  --color-glow: rgb(129 140 248 / 0.14);
+}
+
+/* The one gradient shared by every full-page ground, declared once so `body` and the app shell cannot
+   drift apart. It resolves --color-glow at the point of use, so the .dark override above reaches it
+   without this rule being repeated per theme.
+
+   Anchored above the top edge (-8rem) and wider than it is tall: what lands on screen is the bottom of a
+   wash, which is why it reads as light falling on the page rather than as a coloured shape someone put
+   there. no-repeat so it fades into the flat surface colour on a long page instead of tiling. */
+:root {
+  --app-glow: radial-gradient(50rem 26rem at 50% -8rem, var(--color-glow), transparent 70%);
 }
 
 body {
   background-color: var(--color-surface);
+  background-image: var(--app-glow);
+  background-repeat: no-repeat;
   color: #111827;
   -webkit-font-smoothing: antialiased;
+}
+
+/* The signed-in shell paints its own min-h-screen ground on top of the body, so the gradient has to be
+   available as a utility too — `bg-surface` alone would cover the body's copy of it. */
+@utility app-canvas {
+  background-color: var(--color-surface);
+  background-image: var(--app-glow);
+  background-repeat: no-repeat;
 }
 
 .dark body {

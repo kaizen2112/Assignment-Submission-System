@@ -72,7 +72,9 @@ export function AppShell({ role, children }: { role: Role; children: ReactNode }
     // React's own setter, so it is stable and needs no memoisation.
     <SessionProvider value={profile}>
       <SessionUpdateProvider value={setProfile}>
-      <div className="min-h-screen bg-surface">
+      {/* app-canvas rather than bg-surface: same ground colour, plus the shared top wash. This element
+          covers the body, so it has to carry the gradient itself — see globals.css. */}
+      <div className="min-h-screen app-canvas">
         <TopNav
           role={role}
           profile={profile}

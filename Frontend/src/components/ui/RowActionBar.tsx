@@ -37,13 +37,29 @@ const TONES: Record<Tone, string> = {
     "dark:text-red-400 dark:hover:bg-red-900/30 dark:hover:text-red-300",
 };
 
+// w-full + justify-start rather than shrink-to-fit: these are grid cells, and a button that sizes to its
+// own label leaves four ragged left edges inside the panel — which was the "disorganised" complaint.
+// Filling the cell gives two aligned columns, and the icons line up down each one.
+//
+// min-w-0 is the load-bearing one. A flex item's default `min-width: auto` refuses to shrink below its
+// content, so a long label pushed the button wider than its grid track and painted over the neighbour
+// instead of stopping at the edge. With min-w-0 the button is bounded by its track and the label below
+// truncates rather than escaping.
 const BASE = cn(
-  "inline-flex items-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5",
-  "text-xs font-medium",
+  "inline-flex w-full min-w-0 items-center gap-1.5 rounded-md px-2.5 py-1.5",
+  "justify-start text-left text-xs font-medium",
   "pressable active:scale-[0.96]",
   "disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100",
   "[&>svg]:size-3.5 [&>svg]:shrink-0",
 );
+
+// The label is its own element so it can be the thing that truncates — `truncate` needs a block box with
+// a width, which the flex container itself is not. Nothing actually truncates at the current labels and
+// panel width; this is the guard that makes overlap structurally impossible rather than merely unlikely,
+// so a longer label added later degrades to an ellipsis instead of reopening this bug.
+function ActionLabel({ label }: { label: string }) {
+  return <span className="truncate">{label}</span>;
+}
 
 interface ActionButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> {
   label: string;
@@ -70,7 +86,7 @@ export function ActionButton({
       {...rest}
     >
       {loading ? <Loader2 aria-hidden="true" className="animate-spin" /> : icon}
-      {label}
+      <ActionLabel label={label} />
     </button>
   );
 }
@@ -93,29 +109,45 @@ export function ActionLink({
   return (
     <Link href={href} className={cn(BASE, TONES[tone], className)}>
       {icon}
-      {label}
+      <ActionLabel label={label} />
     </Link>
   );
 }
 
-// The strip itself.
+// The panel itself: a bordered 2x2 block, not a loose strip.
 //
-// **This deliberately does not go to opacity-0 at rest, which the brief asked for.** The stated problem was
-// that nobody can tell what the icons do — and an ACTIONS column that is *empty* until the cursor happens to
-// cross it does not solve that, it makes the actions undiscoverable outright and invisible to anyone tabbing
-// through with a keyboard. 70% is quiet enough that four labels do not compete with the data and legible
-// enough to be found on sight. Change the number here if you want it stronger or fainter.
+// It was `flex flex-wrap` before, which is why it looked disorganised — wrapping packs each line to its own
+// width, so "View submissions / Edit" on one line and "Duplicate / Delete" on the next produced two rows
+// that shared no vertical edge, and the break moved as the labels changed between a draft and a published
+// row. A fixed two-column grid gives every row the same shape whichever four actions it carries.
 //
-// Full strength unconditionally below md: a touch screen has no hover, so anything dimmed there reads as
-// permanently disabled. flex-wrap for the same reason — four labelled buttons do not fit one narrow row, and
-// wrapping is better than a horizontal scrollbar inside a cell.
+// grid-cols-2 with exactly four actions per row, always — `AssignmentStatus` is only Draft | Published,
+// so the grid is never ragged. Callers are expected to keep a stable action *order* so a given cell means
+// the same thing on every row; see the teacher assignments table, where only the first slot varies with
+// status and Edit / Duplicate / Delete never move.
+//
+// w-64 is a fixed width, not a min-width, and that is the point: sized to content, each row's panel was as
+// wide as its own longest label, so a published row and a draft row directly beneath it disagreed about
+// where the second column started. A fixed width makes every panel in the table the same object. The
+// number is set by the widest label the grid has to hold in one 121px track ("Submissions"); a label wider
+// than that truncates rather than overlapping, and is the signal to widen this rather than to abbreviate.
+//
+// The border is what turns four buttons into one object. It also replaces the old opacity trick: the strip
+// used to sit at 70% and come up on row hover, which was already a compromise against the brief's
+// opacity-0 — dimming a *bordered* panel just makes it look disabled, so the panel is at full strength
+// always and the border alone warms on hover. Actions that are visible to everyone, including anyone
+// tabbing through, were the point of labelling them in the first place.
 export function RowActionBar({ children }: { children: ReactNode }) {
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center justify-end gap-1",
-        "opacity-100 md:opacity-70 md:group-hover:opacity-100 md:group-focus-within:opacity-100",
-        "transition-opacity duration-150",
+        // inline-grid so the enclosing right-aligned cell can still push the panel to the edge — a
+        // block-level grid would ignore the cell's text-align and sit on the left.
+        "inline-grid w-64 grid-cols-2 gap-1 rounded-lg p-1 align-middle",
+        "border border-gray-200 shadow-xs dark:border-gray-700",
+        "bg-linear-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900/60",
+        "transition-colors duration-150",
+        "group-hover:border-gray-300 dark:group-hover:border-gray-600",
       )}
     >
       {children}

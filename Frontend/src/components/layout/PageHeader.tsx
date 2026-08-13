@@ -46,28 +46,38 @@ export function PageHeader({
       )}
 
       {crumbs && crumbs.length > 0 && (
+        // The trail was gray-400 on gray-50 throughout — around 2.5:1, under the 4.5:1 body-text floor and
+        // legible mostly to people who already knew what it said. It is now three weights instead of one
+        // flat tone: the links are readable on their own, the current page is the darkest thing in the row,
+        // and only the chevrons stay light, because a separator competing with the words it separates is
+        // the one part of a breadcrumb that genuinely should recede.
         <nav aria-label="Breadcrumb" className="mb-2">
-          <ol className="flex flex-wrap items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
+          <ol className="flex flex-wrap items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400">
             {crumbs.map((crumb, index) => (
-              <li key={`${crumb.label}-${index}`} className="flex items-center gap-1">
+              <li key={`${crumb.label}-${index}`} className="flex items-center gap-1.5">
                 {index > 0 && (
                   <ChevronRight
                     aria-hidden="true"
-                    className="size-3 shrink-0 text-gray-300 dark:text-gray-600"
+                    className="size-3.5 shrink-0 text-gray-400 dark:text-gray-600"
                   />
                 )}
 
                 {crumb.href ? (
                   <Link
                     href={crumb.href}
-                    className="transition-colors duration-150 hover:text-gray-600 dark:hover:text-gray-300"
+                    // Indigo on hover rather than a darker gray: this is the only cue that some crumbs are
+                    // clickable and the last one is not, now that the two are no longer separated by tone
+                    // alone.
+                    className="rounded transition-colors duration-150 hover:text-indigo-600 dark:hover:text-indigo-400"
                   >
                     {crumb.label}
                   </Link>
                 ) : (
                   // aria-current marks the page you are on, which is the one thing a breadcrumb has to
                   // convey and colour alone cannot.
-                  <span aria-current="page">{crumb.label}</span>
+                  <span aria-current="page" className="font-semibold text-gray-900 dark:text-gray-100">
+                    {crumb.label}
+                  </span>
                 )}
               </li>
             ))}

@@ -25,7 +25,14 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const VARIANTS: Record<Variant, string> = {
   // The one accent, reserved for the single most likely action on a screen. Two indigo buttons side by
   // side means neither is the primary one.
-  primary: "bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 hover:shadow-md",
+  //
+  // A gradient rather than the flat indigo-600 it replaced, but only one stop of it: indigo-500 down to
+  // indigo-600, so the lit edge is at the top where a light source would put it. The button's *darkest*
+  // point is still indigo-600, which is what the white label's contrast was checked against — a gradient
+  // that lightened the bottom instead would have quietly moved the label onto a paler ground.
+  primary:
+    "bg-linear-to-b from-indigo-500 to-indigo-600 text-white shadow-sm " +
+    "hover:from-indigo-600 hover:to-indigo-700 hover:shadow-md",
   secondary:
     "bg-white text-gray-700 border border-gray-300 shadow-sm hover:bg-gray-50 hover:shadow-md dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 dark:hover:bg-gray-700",
   // Tinted rather than solid red. A solid red button draws the eye harder than the primary action,

@@ -72,7 +72,12 @@ export function Sidebar({ role }: { role: Role }) {
   const reduce = useReducedMotion();
 
   return (
-    <div className="flex h-full flex-col bg-slate-900 dark:bg-gray-950">
+    // Top-to-bottom gradient rather than the flat fill it replaced. It is one step of the same hue —
+    // slate-900 to slate-950 — which is enough to keep the column from reading as a printed block and far
+    // too little to become a decorative feature of its own. In dark mode it runs gray-950 to slate-950,
+    // both of which stay below the gray-900 page ground, so the sidebar is still the darkest surface on
+    // screen at every point down its height. That invariant is the layout, not a preference.
+    <div className="flex h-full flex-col bg-linear-to-b from-slate-900 to-slate-950 dark:from-gray-950 dark:to-slate-950">
       <nav
         aria-label="Main navigation"
         className="flex flex-1 flex-col gap-1 overflow-y-auto p-3"

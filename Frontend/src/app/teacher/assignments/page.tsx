@@ -277,16 +277,41 @@ export default function TeacherAssignmentsPage() {
                       <TD align="right">
                         {/* Labelled, not icon-only. A row here carries four or five actions, and a strip of
                             bare glyphs makes "which one duplicates and which one publishes?" a memory test.
-                            See RowActionBar for why the strip stays partly visible at rest rather than
-                            appearing only on hover. */}
+                            The 2x2 grid and its border live in RowActionBar, which also records why the
+                            panel is fully visible at rest rather than appearing on hover. */}
+                        {/* Four fixed slots, in the same order on every row. Publish used to sit third
+                            and the submissions link first, so a draft and a published row disagreed
+                            about which cell held Edit and which held Duplicate — scanning down the
+                            column meant re-reading each panel. Only the top-left slot varies now, and
+                            it varies with exactly the thing that should change it: the status. Edit,
+                            Duplicate and Delete never move.
+
+                            The two candidates for that slot are also each row's most likely action, so
+                            the accent tone lands in the same corner throughout. */}
                         <RowActionBar>
-                          {/* Drafts have no submissions to review, so the link would always be empty. */}
-                          {assignment.status === "Published" && (
+                          {assignment.status === "Published" ? (
+                            /* Drafts have no submissions to review, so the link would always be empty. */
                             <ActionLink
                               href={`/teacher/assignments/${assignment.id}/submissions`}
-                              label="View submissions"
+                              // "Submissions", not "View submissions": in a column headed ACTIONS, beside
+                              // a send icon, the verb carries no information — and it was the widest label
+                              // in the panel, so dropping it is what lets the whole column be narrower.
+                              label="Submissions"
                               icon={<Send />}
                               tone="accent"
+                            />
+                          ) : (
+                            /* Not in the brief's list of four, and kept anyway: publishing is how a draft
+                               reaches students at all, and dropping the control would have removed the
+                               feature rather than relabelled it. */
+                            <ActionButton
+                              label="Publish"
+                              icon={<Upload />}
+                              tone="accent"
+                              loading={isBusy}
+                              onClick={() =>
+                                void runAction(assignment.id, () => publishAssignment(assignment.id))
+                              }
                             />
                           )}
 
@@ -305,21 +330,6 @@ export default function TeacherAssignmentsPage() {
                             loading={isBusy}
                             onClick={() => void handleDuplicate(assignment.id)}
                           />
-
-                          {/* Not in the brief's list of four, and kept anyway: publishing is how a draft
-                              reaches students at all, and dropping the control would have removed the
-                              feature rather than relabelled it. */}
-                          {assignment.status === "Draft" && (
-                            <ActionButton
-                              label="Publish"
-                              icon={<Upload />}
-                              tone="accent"
-                              loading={isBusy}
-                              onClick={() =>
-                                void runAction(assignment.id, () => publishAssignment(assignment.id))
-                              }
-                            />
-                          )}
 
                           <ActionButton
                             label="Delete"
