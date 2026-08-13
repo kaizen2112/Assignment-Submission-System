@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { GraduationCap, Menu } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
@@ -71,13 +72,23 @@ export function TopNav({
               so it sits on the app side of that boundary rather than reading as a profile control. */}
           <ThemeToggle />
 
+          {/* The name and avatar are the link to the profile, which is where every application on earth puts
+              it. A plain <Link> rather than a dropdown menu: there is exactly one destination behind it, and a
+              menu holding a single item is a click nobody needs. */}
           {profile && (
-            <div className="flex items-center gap-2.5">
+            <Link
+              href={`/${role.toLowerCase()}/profile`}
+              title="Your profile"
+              className={cn(
+                "flex items-center gap-2.5 rounded-lg px-1.5 py-1",
+                "transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-gray-800",
+              )}
+            >
               <span className="hidden max-w-40 truncate text-sm font-medium text-gray-700 dark:text-gray-200 sm:inline">
                 {profile.fullName}
               </span>
               <Avatar fullName={profile.fullName} />
-            </div>
+            </Link>
           )}
 
           {/* A ghost text link, not a button. Signing out is the least likely thing anyone came here to

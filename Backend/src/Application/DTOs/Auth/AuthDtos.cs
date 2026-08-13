@@ -8,7 +8,15 @@ public sealed record RefreshRequest(string RefreshToken);
 
 public sealed record LogoutRequest(string RefreshToken);
 
-public sealed record UserProfileResponse(Guid Id, string FullName, string Email, string Role);
+// CreatedAt is the "member since" line on the profile page. Added here rather than fetched separately
+// because /auth/me is already loaded once per session by AppShell — a second request for one timestamp the
+// same row already carries would be waste.
+public sealed record UserProfileResponse(
+    Guid Id,
+    string FullName,
+    string Email,
+    string Role,
+    DateTime CreatedAt);
 
 // Shape fixed by docs/04. No expiry field: the client can read "exp" from the token itself, and
 // returning a second copy of it invites the two disagreeing. If Phase 5 wants it surfaced, add it

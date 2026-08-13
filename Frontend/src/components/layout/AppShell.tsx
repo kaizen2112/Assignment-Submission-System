@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { Sidebar } from "@/components/layout/Sidebar";
-import { SessionProvider } from "@/components/layout/SessionContext";
+import { SessionProvider, SessionUpdateProvider } from "@/components/layout/SessionContext";
 import { TopNav } from "@/components/layout/TopNav";
 import { PageTransition } from "@/components/ui/PageTransition";
 import { api, ApiError } from "@/lib/api";
@@ -67,7 +67,11 @@ export function AppShell({ role, children }: { role: Role; children: ReactNode }
   return (
     // The SessionProvider wraps the sidebar as well as the page, because the sidebar's footer shows the
     // signed-in user. Keeping /auth/me to a single request is the reason this context exists at all.
+    // setProfile is published alongside the value so the profile page can rename the user in the top bar and
+    // sidebar the moment the save returns, instead of leaving the old name on screen until a reload. It is
+    // React's own setter, so it is stable and needs no memoisation.
     <SessionProvider value={profile}>
+      <SessionUpdateProvider value={setProfile}>
       <div className="min-h-screen bg-surface">
         <TopNav
           role={role}
@@ -121,6 +125,7 @@ export function AppShell({ role, children }: { role: Role; children: ReactNode }
           </div>
         </main>
       </div>
+      </SessionUpdateProvider>
     </SessionProvider>
   );
 }

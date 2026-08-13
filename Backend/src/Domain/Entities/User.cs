@@ -59,4 +59,12 @@ public sealed class User
     // Takes an already-hashed value: hashing lives in Infrastructure, and this entity must never see
     // a plaintext password it could accidentally persist.
     public void SetPasswordHash(string passwordHash) => PasswordHash = passwordHash;
+
+    // What a user may change about themselves, which is their display name and nothing else.
+    //
+    // A separate method from Update above rather than a call into it with the existing email and role passed
+    // back in. Those two are an administrator's to set — an email is an identity and a role is an authority —
+    // and routing a self-service edit through a method that *accepts* them would mean the only thing stopping
+    // a user from changing their own role is the caller remembering not to. Here it is structural.
+    public void UpdateProfile(string fullName) => FullName = fullName;
 }

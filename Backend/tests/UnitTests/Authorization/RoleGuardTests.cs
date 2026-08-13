@@ -221,6 +221,27 @@ public sealed class RoleGuardTests
     }
 
     // =============================================================================================
+    // UsersController — self-service, so authenticated but deliberately not role-scoped
+    // =============================================================================================
+
+    [Theory]
+    [InlineData(nameof(UsersController.UpdateMe))]
+    [InlineData(nameof(UsersController.ChangeMyPassword))]
+    public void UsersController_SelfService_IsAuthenticatedButNotRoleScoped(string actionName)
+    {
+        var roles = RequiredRoles(typeof(UsersController).GetMethod(actionName)!);
+
+        // Empty, not null: a token is required, but no role is. Every role edits their own name and changes
+        // their own password, so there is nothing to narrow to — and `me` in the route means there is no id to
+        // point at somebody else. Do not "fix" this by adding Roles; that would only list all three.
+        //
+        // The same shape as CommentsController.Delete above, for a different reason: that one is a data
+        // question, this one applies equally to everybody.
+        roles.Should().BeEmpty("self-service applies to every role");
+        roles.Should().NotBeNull("but a token is still required");
+    }
+
+    // =============================================================================================
     // NoToken_HitsAnyEndpoint_Returns401 — nothing is anonymous except login and refresh
     // =============================================================================================
 
@@ -236,7 +257,8 @@ public sealed class RoleGuardTests
         {
             typeof(AuthController), typeof(AssignmentsController),
             typeof(SubmissionsController), typeof(AdminController),
-            typeof(CommentsController), typeof(ClassesController)
+            typeof(CommentsController), typeof(ClassesController),
+            typeof(UsersController)
         };
 
         var anonymous = new List<string>();
@@ -269,7 +291,8 @@ public sealed class RoleGuardTests
         {
             typeof(AuthController), typeof(AssignmentsController),
             typeof(SubmissionsController), typeof(AdminController),
-            typeof(CommentsController), typeof(ClassesController)
+            typeof(CommentsController), typeof(ClassesController),
+            typeof(UsersController)
         };
 
         foreach (var controller in controllers)

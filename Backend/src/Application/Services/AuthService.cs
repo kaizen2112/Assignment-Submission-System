@@ -126,5 +126,5 @@ public sealed class AuthService : IAuthService
     }
 
     private static UserProfileResponse ToProfile(User user) =>
-        new(user.Id, user.FullName, user.Email, user.Role.ToString());
+        new(user.Id, user.FullName, user.Email, user.Role.ToString(), user.CreatedAt);
 }

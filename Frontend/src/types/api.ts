@@ -16,6 +16,19 @@ export interface UserProfile {
   fullName: string;
   email: string;
   role: Role;
+  // "Member since" on the profile page. Carried by /auth/me, which AppShell already loads once per session.
+  createdAt: string;
+}
+
+// Self-service profile edits (Application/DTOs/Profile/ProfileDtos.cs). Neither carries a user id: the caller
+// comes from the token, so there is no id to point at somebody else's account.
+export interface UpdateProfileRequest {
+  fullName: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
 }
 
 export interface AuthResponse {
