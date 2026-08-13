@@ -1,7 +1,7 @@
 # --- Agent / internal docs (kept out of the evaluator's clone) ---
 .agent
 docs/
-
+WALKTHROUGH.md
 # --- Environment / secrets ---
 .env
 .env.local
