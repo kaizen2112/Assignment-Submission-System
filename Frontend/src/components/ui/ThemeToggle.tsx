@@ -17,11 +17,14 @@ export function ThemeToggle() {
   // A repair for development only. React's Strict Mode remounts once, and on that remount it resets
   // <html> to just the attributes it manages from JSX — which clears the class the inline script set,
   // silently reverting a dark page to light. Production renders once and never hits this.
+  // Must resolve the three states exactly as the inline script in the root layout does, or a Strict Mode
+  // remount would "repair" the page to a different theme than the one it loaded with. Light is the
+  // default; only the explicit string "system" defers to the OS.
   useEffect(() => {
     const stored = localStorage.getItem("theme");
     const dark =
       stored === "dark" ||
-      (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches);
+      (stored === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
     document.documentElement.classList.toggle("dark", dark);
   }, []);

@@ -11,10 +11,31 @@ the request regardless of what the frontend did.
 
 ---
 
+## Live demo
+
+| | URL |
+|---|---|
+| **Application** | **https://assignment-submission-system-one.vercel.app** |
+| **API — Swagger UI** | https://assignment-submission-system-q9la.onrender.com/swagger |
+| Health check | https://assignment-submission-system-q9la.onrender.com/health |
+
+Sign in with any account from [Demo accounts](#demo-accounts) below — they work on the live site exactly
+as they do locally.
+
+> ⏱️ **The first request can take 30–50 seconds.** The API runs on Render's free tier, which sleeps the
+> container after ~15 minutes of inactivity and cold-starts it on the next request. This is expected, not
+> a fault. Every request after the first is fast. If the login button appears to hang, wait — it is waking
+> the server up.
+
+The whole stack also runs locally with one command; see [Quick start](#quick-start).
+
+---
+
 ## Contents
 
-[Demo accounts](#demo-accounts) · [Quick start](#quick-start) · [Database setup](#database-setup) ·
-[Tests](#running-the-tests) · [Tech stack](#tech-stack) · [Requirement coverage](#requirement-coverage) ·
+[Live demo](#live-demo) · [Demo accounts](#demo-accounts) · [Quick start](#quick-start) ·
+[Database setup](#database-setup) · [Tests](#running-the-tests) · [Tech stack](#tech-stack) ·
+[Deployment](#deployment) · [Requirement coverage](#requirement-coverage) ·
 [Beyond the brief](#beyond-the-brief) · [Roles](#roles-and-permissions) ·
 [Business rules](#business-rules) · [Schema](#database-schema) · [API](#api-reference) ·
 [Architecture](#architecture) · [Security](#security) · [Design decisions](#design-decisions) ·
@@ -34,6 +55,11 @@ Created automatically the first time the app starts. No setup, no manual data en
 
 A second teacher (`teacher2@school.com`) and two more students (`student2@`, `student3@school.com`) exist
 with the same passwords — useful for checking that one teacher cannot touch another's work.
+
+**There is no sign-up page, deliberately.** Accounts are created by an administrator, who also grants each
+teacher the subjects they teach and enrols students into their class. A school issues accounts; it does
+not let strangers enrol themselves into a class. To see this, sign in as the admin and build a class from
+nothing at `/admin/users` and `/admin/classes`.
 
 The seed also creates classes, subjects, teacher–subject grants, enrolments, assignments and submissions,
 so the first screen you see has real data on it.
@@ -196,6 +222,47 @@ Repositories are mocked, so the suite needs no database and finishes in well und
 |---|---|
 | Containers | Docker Compose — three services, multi-stage builds |
 | Database image | `postgres:16-alpine` with a named volume and a health check |
+| Frontend hosting | Vercel — native Next.js, auto-deploys from `main` |
+| API hosting | Render — free-tier web service built from `Backend/Dockerfile` |
+| Database hosting | Neon — serverless PostgreSQL 16 |
+
+---
+
+## Deployment
+
+The live demo runs as three independently hosted pieces, talking to each other over the same public REST
+API the local setup uses. Nothing about the application code changes between local and deployed — only
+configuration.
+
+```
+Browser ──► Vercel (Next.js)  ──HTTPS──►  Render (ASP.NET Core, Docker)  ──TLS──►  Neon (PostgreSQL)
+```
+
+| Piece | Host | How it is built |
+|---|---|---|
+| Frontend | Vercel | Root directory `Frontend`, native Next.js build |
+| API | Render | Docker, `Backend/Dockerfile`, build context `Backend`, health check `/health` |
+| Database | Neon | Schema and demo data created by the API's own migrations and seeder on first boot |
+
+### Configuration that makes it work
+
+| Where | Variable | Why it matters |
+|---|---|---|
+| Render | `ASPNETCORE_ENVIRONMENT=Development` | Applies migrations, seeds demo data and serves Swagger. It also skips `UseHttpsRedirection`, which is **required** here: Render terminates TLS at its edge and forwards plain HTTP, so an app redirecting to HTTPS would loop forever. |
+| Render | `ConnectionStrings__Default` | Npgsql key/value form, not a `postgresql://` URL, and `SSL Mode=Require` — Neon refuses unencrypted connections. |
+| Render | `JwtSettings__Key` | Must be ≥ 32 bytes; the app refuses to start otherwise. |
+| Render | `Cors__AllowedOrigins__0` | The Vercel origin. Without it the API allows nothing, and every browser call fails while Swagger keeps working — the most misleading failure in the whole setup. |
+| Vercel | `NEXT_PUBLIC_API_URL` | Must end in `/api/v1` with no trailing slash. `next build` **inlines** this into the browser bundle and freezes it, so changing it requires a redeploy, not a restart. |
+
+Both hosts redeploy automatically on a push to `main`.
+
+### Known trade-offs of the free tiers
+
+- **Cold starts.** Render sleeps the API after ~15 minutes idle; the next request takes 30–50 seconds.
+- **Development environment in production.** Documented above as a deliberate choice — it is what keeps the
+  live demo seeded and self-serve. A real deployment would run `Production`, apply migrations as a separate
+  release step, and inject secrets from a vault. Error handling is unaffected either way: the exception
+  middleware runs first in the pipeline and returns a clean 500 with no stack trace in any environment.
 
 ---
 
@@ -791,6 +858,7 @@ Judgement calls the brief left open, resolved toward keeping the system's guaran
 | **Admins read discussions but cannot post or moderate.** | An admin holds no teaching scope; participating in a subject's discussion is a participant's action. |
 | **Students may see classmates' names and emails, nothing else.** | A roster is ordinary in a school. Anything about performance is a teacher's to see, so the endpoint never sends it. Access is gated on the caller's own enrolment. |
 | **Theme lives in the browser, not the database.** | The no-flash script applies it *during HTML parsing*, before any request could return — so a stored value could only correct the theme after first paint, which is the flash it exists to prevent. |
+| **Light is the default theme, not the operating system's setting.** | A first-time visitor should see the design as it was drawn rather than have their laptop decide. "Follow your device" stays available in Preferences, but as an explicit stored choice — which is why the three states are *no preference* (light), *system*, and *light/dark*, rather than treating a missing value as "ask the OS". |
 | **Timestamps are UTC everywhere**, and a deadline without an offset is read as UTC. | Rejecting it would fail Swagger's own try-it-out payload for no real gain. |
 
 ---
@@ -840,7 +908,10 @@ Stated plainly rather than left to be discovered. None affect the correctness of
 - **The Docker image runs `ASPNETCORE_ENVIRONMENT=Development` deliberately** — that is what applies
   migrations, seeds demo data and serves Swagger, which is what makes setup one command. A real
   deployment would run Production, apply migrations as a separate step, and inject its own secrets.
-- **Not deployed.** Runs locally via Docker; there is no public URL.
+  The [live demo](#live-demo) runs the same way, for the same reason.
+- **Free-tier cold starts.** The hosted API sleeps after ~15 minutes idle and takes 30–50 seconds to wake.
+- **No CI pipeline.** Vercel and Render rebuild on push, but nothing runs the 150 tests before a deploy;
+  a GitHub Actions workflow calling `dotnet test` is the obvious next step.
 
 ---
 

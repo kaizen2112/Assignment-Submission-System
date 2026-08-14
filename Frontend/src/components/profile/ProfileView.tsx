@@ -351,9 +351,11 @@ function SecurityCard() {
 
 type ThemeChoice = "light" | "dark" | "system";
 
+// Light is the fallback, matching the inline script in the root layout. "system" is a stored value now,
+// not the absence of one — see the note there for why the two had to stop being the same thing.
 function readTheme(): ThemeChoice {
   const stored = localStorage.getItem("theme");
-  return stored === "light" || stored === "dark" ? stored : "system";
+  return stored === "dark" || stored === "system" ? stored : "light";
 }
 
 function PreferencesCard() {
@@ -372,14 +374,13 @@ function PreferencesCard() {
 
   // Read during render rather than in an effect — localStorage is synchronous, and `hydrated` is what keeps
   // the server and client markup identical until it is safe to look.
-  const active = choice ?? (hydrated ? readTheme() : "system");
+  const active = choice ?? (hydrated ? readTheme() : "light");
 
   const apply = (value: ThemeChoice) => {
-    if (value === "system") {
-      localStorage.removeItem("theme");
-    } else {
-      localStorage.setItem("theme", value);
-    }
+    // "system" is written out rather than clearing the key. Removing it would put the user back into the
+    // *default* state, which is now light — so choosing "Follow your device" would have silently meant
+    // "always light" for anyone whose device is dark.
+    localStorage.setItem("theme", value);
 
     // The same two lines the inline script and ThemeToggle use: the class on <html> is the source of truth, so
     // it is set from the resolved value rather than from a mirror of it held in React.

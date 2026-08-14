@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { GraduationCap, LogIn, XCircle } from "lucide-react";
+import { GraduationCap, Info, LogIn, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CARD_CLASS } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
@@ -163,6 +163,23 @@ export default function LoginPage() {
             Click a role to fill the form. Local demo values only.
           </p>
         </Card>
+
+        {/* There is no "create an account" link on this page, and that is a design decision rather than a
+            missing feature — so it is stated here instead of leaving the reader to wonder where the link
+            went. A school hands out accounts; it does not let strangers enrol themselves into a class. */}
+        <p className="mt-6 flex items-start gap-2.5 rounded-lg border border-gray-200 bg-white/70 px-3.5 py-3 text-xs leading-relaxed text-gray-600 dark:border-gray-700 dark:bg-gray-800/70 dark:text-gray-400">
+          <Info
+            aria-hidden="true"
+            className="mt-0.5 size-4 shrink-0 text-indigo-500 dark:text-indigo-400"
+          />
+          <span>
+            <strong className="font-semibold text-gray-800 dark:text-gray-200">
+              Accounts are created by an administrator.
+            </strong>{" "}
+            There is no self-registration — an admin adds teachers and students, assigns each teacher the
+            subjects they teach, and enrols students into their class.
+          </span>
+        </p>
       </div>
     </main>
   );

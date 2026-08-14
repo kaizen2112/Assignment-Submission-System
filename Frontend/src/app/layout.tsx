@@ -25,10 +25,17 @@ export const viewport: Viewport = {
 // already painted the server's HTML. Only a synchronous script in <head> runs during HTML parsing,
 // which is before there is anything to flash.
 //
-// No stored preference falls back to the OS setting, so someone whose machine is in dark mode gets a
-// dark app on first visit without having to find the toggle. try/catch because localStorage throws
-// outright in Safari's private mode rather than returning null.
-const THEME_SCRIPT = `(function(){try{var s=localStorage.getItem("theme");var d=s==="dark"||(!s&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d)}catch(e){}})()`;
+// **Light is the default.** No stored preference means light, regardless of what the operating system
+// prefers — a first-time visitor sees the design as it was drawn, and dark mode is something they opt
+// into rather than something their laptop decides for them.
+//
+// That makes "follow my device" a real third choice rather than the absence of one, so it is stored as
+// the literal string "system". The three states are therefore distinguishable: no key at all (light),
+// "system" (ask the OS), and "light"/"dark" (explicit). Treating a missing key as "system" — which is
+// what this did before — is exactly what made the OS the default.
+//
+// try/catch because localStorage throws outright in Safari's private mode rather than returning null.
+const THEME_SCRIPT = `(function(){try{var s=localStorage.getItem("theme");var d=s==="dark"||(s==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d)}catch(e){}})()`;
 
 export default function RootLayout({
   children,
